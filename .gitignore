@@ -9,3 +9,32 @@ config.log
 config.make
 config.status
 
+# build results on windows
+Debug/
+Proto/
+lkg/
+src/all-vs2010.suo
+src/fsharp/FSharp.Build-proto/obj/
+src/fsharp/FSharp.Build/obj/
+src/fsharp/FSharp.Compiler-proto/obj/
+src/fsharp/FSharp.Compiler.Interactive.Settings/obj/
+src/fsharp/FSharp.Compiler.Server.Shared/obj/
+src/fsharp/FSharp.Compiler/obj/
+src/fsharp/FSharp.Core/obj/
+src/fsharp/Fsc-proto/obj/
+src/fsharp/Fsc/obj/
+src/fsharp/fsi/obj/
+
+# ignore generated lex/pars files
+src/fsharp/FSharp.Compiler-proto/illex.fs
+src/fsharp/FSharp.Compiler-proto/ilpars.fs
+src/fsharp/FSharp.Compiler-proto/ilpars.fsi
+src/fsharp/FSharp.Compiler-proto/lex.fs
+src/fsharp/FSharp.Compiler-proto/pars.fs
+src/fsharp/FSharp.Compiler-proto/pars.fsi
+src/fsharp/FSharp.Compiler/illex.fs
+src/fsharp/FSharp.Compiler/ilpars.fs
+src/fsharp/FSharp.Compiler/ilpars.fsi
+src/fsharp/FSharp.Compiler/lex.fs
+src/fsharp/FSharp.Compiler/pars.fs
+src/fsharp/FSharp.Compiler/pars.fsi

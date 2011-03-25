@@ -531,6 +531,12 @@
   <data name="Parser.TOKEN.YIELD.BANG" xml:space="preserve">
     <value>yield!</value>
   </data>
+  <data name="Parser.TOKEN.MATCH.BANG" xml:space="preserve">
+    <value>match!</value>
+  </data>
+  <data name="Parser.TOKEN.BANG" xml:space="preserve">
+    <value>symbol '!'</value>
+  </data>
   <data name="Parser.TOKEN.OINTERFACE.MEMBER" xml:space="preserve">
     <value>keyword 'interface'</value>
   </data>

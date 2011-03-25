@@ -156,9 +156,9 @@ let grabXmlDoc(parseState:IParseState,elemIdx) =
 %token BAR_BAR UPCAST DOWNCAST NULL RESERVED MODULE NAMESPACE DELEGATE CONSTRAINT BASE
 %token AND AS ASSERT OASSERT ASR BEGIN DO DONE DOWNTO ELSE ELIF END DOT_DOT
 %token EXCEPTION FALSE FOR FUN FUNCTION IF IN FINALLY DO_BANG 
-%token LAZY OLAZY  MATCH MUTABLE NEW OF 
+%token LAZY OLAZY  MATCH MATCH_BANG MUTABLE NEW OF 
 %token OPEN OR REC THEN TO TRUE TRY TYPE VAL INLINE INTERFACE INSTANCE
-%token WHEN WHILE WITH HASH AMP AMP_AMP QUOTE LPAREN RPAREN STAR COMMA RARROW GREATER_BAR_RBRACK LPAREN_STAR_RPAREN
+%token WHEN WHILE WITH HASH AMP AMP_AMP QUOTE LPAREN RPAREN STAR COMMA RARROW GREATER_BAR_RBRACK LPAREN_STAR_RPAREN BANG
 %token QMARK QMARK_QMARK DOT COLON COLON_COLON COLON_GREATER  COLON_QMARK_GREATER COLON_QMARK COLON_EQUALS SEMICOLON 
 %token SEMICOLON_SEMICOLON LARROW EQUALS  LBRACK  LBRACK_BAR  LBRACK_LESS LBRACE
 %token LBRACE_LESS BAR_RBRACK GREATER_RBRACE UNDERSCORE
@@ -384,6 +384,7 @@ let grabXmlDoc(parseState:IParseState,elemIdx) =
 
 %right LARROW 
 %right COLON_EQUALS 
+%nonassoc BANG
 %nonassoc pat_tuple expr_tuple
 %left COMMA
 %nonassoc slice_comma  /* for matrix.[1..2,3..4] the ".." has higher precedence than "2,3" */
@@ -2105,6 +2106,7 @@ atomicPattern:
   | quoteExpr 
       { SynPat.QuoteExpr($1,lhs(parseState)) } 
   | CHAR DOT_DOT CHAR { SynPat.DeprecatedCharRange ($1,$3,rhs2 parseState 1 3) }
+  | BANG constrPattern { SynPat.Bang ($2, rhs2 parseState 1 2) }
   | LBRACE recordPatternElements RBRACE
       { $2 }
   | LBRACK listPatternElements RBRACK
@@ -2254,6 +2256,15 @@ recover:
    | error { true }  
    | EOF { false }
 
+multipleBangBindings:
+  | headBindingPattern EQUALS typedSeqExprBlock AND multipleBangBindings
+     { let spBind = SequencePointAtBinding(unionRanges (rhs parseState 1) $3.Range)
+       let m = rhs parseState 1
+       ($1, $3)::$5 }
+  | headBindingPattern EQUALS typedSeqExprBlock
+     { let spBind = SequencePointAtBinding(unionRanges (rhs parseState 1) $3.Range)
+       let m = rhs parseState 1
+       [($1, $3)] }
 
 declExpr:
   | defnBindings IN typedSeqExpr  %prec expr_let 
@@ -2410,25 +2421,25 @@ declExpr:
   | YIELD_BANG declExpr
      { SynExpr.YieldOrReturnFrom(($1,not $1), $2, unionRanges (rhs parseState 1) $2.Range) } 
 
-  | BINDER headBindingPattern EQUALS typedSeqExprBlock IN opt_OBLOCKSEP typedSeqExprBlock %prec expr_let 
-     { let spBind = SequencePointAtBinding(rhs2 parseState 1 5)
+  | BINDER multipleBangBindings IN opt_OBLOCKSEP typedSeqExprBlock %prec expr_let 
+     { let spBind = SequencePointAtBinding(rhs2 parseState 1 2)
        let m = rhs parseState 1
-       SynExpr.LetOrUseBang(spBind,($1 = "use"),$2,$4,$7, lhs parseState) }
+       SynExpr.LetOrUseBang(spBind,($1 = "use"), $2, $5, lhs parseState) }
 
-  | OBINDER headBindingPattern EQUALS typedSeqExprBlock hardwhiteDefnBindingsTerminator opt_OBLOCKSEP typedSeqExprBlock %prec expr_let 
-     { let spBind = SequencePointAtBinding(unionRanges (rhs parseState 1) $4.Range)
+  | OBINDER multipleBangBindings hardwhiteDefnBindingsTerminator opt_OBLOCKSEP typedSeqExprBlock %prec expr_let 
+     { let spBind = SequencePointAtBinding(rhs2 parseState 1 2)
        let m = rhs parseState 1
-       SynExpr.LetOrUseBang(spBind,($1 = "use"),$2,$4,$7, lhs parseState) }
+       SynExpr.LetOrUseBang(spBind,($1 = "use"), $2, $5, lhs parseState) }
 
-  | OBINDER headBindingPattern EQUALS typedSeqExprBlock hardwhiteDefnBindingsTerminator opt_OBLOCKSEP error %prec expr_let 
+  | OBINDER multipleBangBindings hardwhiteDefnBindingsTerminator opt_OBLOCKSEP error %prec expr_let 
      { // error recovery that allows intellisense when writing incomplete computation expressions 
-       let spBind = SequencePointAtBinding(unionRanges (rhs parseState 1) $4.Range) 
+       let spBind = SequencePointAtBinding(rhs2 parseState 1 2)
        let m = rhs parseState 1
-       SynExpr.LetOrUseBang(spBind,($1 = "use"),$2,$4, SynExpr.ImplicitZero m, lhs parseState) }
+       SynExpr.LetOrUseBang(spBind,($1 = "use"), $2, SynExpr.ImplicitZero m, lhs parseState) }
 
   | DO_BANG typedSeqExpr IN opt_OBLOCKSEP typedSeqExprBlock %prec expr_let 
      { let spBind = NoSequencePointAtDoBinding
-       SynExpr.LetOrUseBang(spBind,false,SynPat.Const(SynConst.Unit,$2.Range),$2,$5, unionRanges (rhs parseState 1) $5.Range) }
+       SynExpr.LetOrUseBang(spBind,false, [SynPat.Const(SynConst.Unit,$2.Range),$2] ,$5, unionRanges (rhs parseState 1) $5.Range) }
 
   | ODO_BANG typedSeqExprBlock hardwhiteDefnBindingsTerminator %prec expr_let 
      { SynExpr.DoBang($2, unionRanges (rhs parseState 1) $2.Range) }
@@ -2441,6 +2452,18 @@ declExpr:
      { errorR(Error(FSComp.SR.parsArrowUseIsLimited(),lhs parseState));
        SynExpr.YieldOrReturn((true,true),$2, lhs parseState) } 
      
+  /* Match bang (with untested error recovery, same as 'match') */     
+  | MATCH_BANG typedSeqExpr withClauses              %prec expr_match 
+      { let mMatch = (rhs parseState 1) in
+        let mWith,(clauses,mLast) = $3 in 
+        let spBind = SequencePointAtBinding(unionRanges mMatch mWith) in 
+        SynExpr.MatchBang(spBind, $2,clauses,unionRanges mMatch mLast) }
+
+  | MATCH_BANG typedSeqExpr     recover               %prec expr_match 
+      { if not $3 then reportParseErrorAt (rhs parseState 3) (FSComp.SR.parsUnexpectedEndOfFile());
+        (* Produce approximate expression during error recovery *)
+        SynExpr.DiscardAfterError($2,rhs2 parseState 1 2) }
+  
   /* END MONADIC SYNTAX ONLY */
 
   | declExpr COLON_QMARK         typ  { SynExpr.TypeTest($1,$3, unionRanges $1.Range $3.Range) }
@@ -2651,6 +2674,11 @@ atomicExpr:
       { let arg2,hpa2 = $2 
         if not (IsValidPrefixOperatorUse $1) then reportParseErrorAt arg2.Range (FSComp.SR.parsInvalidPrefixOperator());
         mkSynPrefix (rhs parseState 1) (unionRanges (rhs parseState 1) arg2.Range) $1 arg2,hpa2 }
+
+  | BANG atomicExpr  
+      { let arg2,hpa2 = $2 
+        if not (IsValidPrefixOperatorUse "!") then reportParseErrorAt arg2.Range (FSComp.SR.parsInvalidPrefixOperator());
+        mkSynPrefix (rhs parseState 1) (unionRanges (rhs parseState 1) arg2.Range) "!" arg2,hpa2 }
 
   | atomicExpr DOT atomicExprQualification 
       { let arg1,hpa1 = $1 
@@ -3325,6 +3353,10 @@ operatorName:
       { if not (IsValidPrefixOperatorDefinitionName $1) then 
             reportParseErrorAt (lhs(parseState)) (FSComp.SR.parsInvalidPrefixOperatorDefinition());
         $1 }
+  | BANG
+      { if not (IsValidPrefixOperatorDefinitionName "!") then 
+            reportParseErrorAt (lhs(parseState)) (FSComp.SR.parsInvalidPrefixOperatorDefinition());
+        "!" }
   | INFIX_STAR_STAR_OP  { $1 }
   | INFIX_COMPARE_OP { $1 }
   | INFIX_AT_HAT_OP  { $1 }

@@ -28,7 +28,7 @@
     <OtherFlags>$(OtherFlags) --warnon:1182 --compiling-fslib --optimize --maxerrors:20 --extraoptimizationloops:1 </OtherFlags>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)'=='cli\4.0' ">
-    <OtherFlags>$(OtherFlags) --compiling-fslib-mscorlib40:"c:\Program Files\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\mscorlib.dll" </OtherFlags>
+    <OtherFlags>$(OtherFlags)</OtherFlags>
   </PropertyGroup>
   <ItemGroup>
     <CustomAdditionalCompileInputs Include="$(FSharpSourcesRoot)\..\Proto\$(protoCLIDir)\bin\fsc-proto.exe">

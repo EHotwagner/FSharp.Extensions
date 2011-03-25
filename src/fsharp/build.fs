@@ -889,6 +889,8 @@ let OutputPhasedErrorR (os:System.Text.StringBuilder) (err:PhasedError) =
               | Parser.TOKEN_ODO_BANG -> getErrorString("Parser.TOKEN.ODO.BANG")
               | Parser.TOKEN_YIELD -> getErrorString("Parser.TOKEN.YIELD")
               | Parser.TOKEN_YIELD_BANG  -> getErrorString("Parser.TOKEN.YIELD.BANG")
+              | Parser.TOKEN_BANG -> getErrorString("Parser.TOKEN.BANG")
+              | Parser.TOKEN_MATCH_BANG  -> getErrorString("Parser.TOKEN.MATCH.BANG")
               | Parser.TOKEN_OINTERFACE_MEMBER-> getErrorString("Parser.TOKEN.OINTERFACE.MEMBER")
               | Parser.TOKEN_ELIF -> getErrorString("Parser.TOKEN.ELIF")
               | Parser.TOKEN_RARROW -> getErrorString("Parser.TOKEN.RARROW")

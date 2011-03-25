@@ -332,8 +332,7 @@ and
         | SynType.Var(_,m) | SynType.Anon m | SynType.WithGlobalConstraints(_,_,m)
         | SynType.HashConstraint(_,m) | SynType.MeasureDivide(_,_,m) | SynType.MeasurePower(_,_,m) | SynType.MeasureOne m -> m
 
-    
-and  
+and 
     [<NoEquality; NoComparison;RequireQualifiedAccess>]
     SynExpr =
     /// Parenthesized expressions. Kept in AST to distinguish A.M((x,y)) 
@@ -418,7 +417,7 @@ and
     /// Computation expressions only
     | YieldOrReturnFrom  of (bool * bool) * SynExpr * range
     /// Computation expressions only
-    | LetOrUseBang    of SequencePointInfoForBinding * bool * SynPat * SynExpr * SynExpr * range
+    | LetOrUseBang    of SequencePointInfoForBinding * bool * (SynPat * SynExpr) list * SynExpr * range
     /// Computation expressions only
     | DoBang      of SynExpr * range
 
@@ -437,6 +436,9 @@ and
     | ArbitraryAfterError  of range  
     /// Inserted for error recovery
     | DiscardAfterError  of SynExpr * range  
+
+    /// 'match!' construct from joinads
+    | MatchBang of  SequencePointInfoForBinding * SynExpr * SynMatchClause list * range
 
 and  
     [<NoEquality; NoComparison; RequireQualifiedAccess>]
@@ -493,13 +495,15 @@ and
     | DeprecatedCharRange of char * char * range
     /// Used internally in the type checker
     | InstanceMember of  Ident * Ident * (* holds additional ident for tooling *) Ident option * SynAccess option * range (* adhoc overloaded method/property *)
+    /// !<pattern> extension for joinads
+    | Bang of SynPat * range
 
     member p.Range = 
       match p with 
       | SynPat.Const(_,m) | SynPat.Wild m | SynPat.Named (_,_,_,_,m) | SynPat.Or (_,_,m) | SynPat.Ands (_,m) 
       | SynPat.LongIdent (_,_,_,_,_,m) | SynPat.ArrayOrList(_,_,m) | SynPat.Tuple (_,m) |SynPat.Typed(_,_,m) |SynPat.Attrib(_,_,m) 
       | SynPat.Record (_,m) | SynPat.DeprecatedCharRange (_,_,m) | SynPat.Null m | SynPat.IsInst (_,m) | SynPat.QuoteExpr (_,m)
-      | SynPat.InstanceMember(_,_,_,_,m) | SynPat.OptionalVal(_,m) | SynPat.Paren(_,m) -> m 
+      | SynPat.InstanceMember(_,_,_,_,m) | SynPat.OptionalVal(_,m) | SynPat.Paren(_,m) | SynPat.Bang(_, m) -> m 
 
 and  
     [<NoEquality; NoComparison>]
@@ -923,6 +927,7 @@ type SynExpr with
         | SynExpr.ArrayOrListOfSeqExpr (_,_,m)
         | SynExpr.Lambda (_,_,_,_,m)
         | SynExpr.Match (_,_,_,_,m)
+        | SynExpr.MatchBang (_,_,_,m)
         | SynExpr.Do (_,m)
         | SynExpr.Assert (_,m)
         | SynExpr.App (_,_,_,m)
@@ -959,7 +964,7 @@ type SynExpr with
         | SynExpr.ImplicitZero (m)
         | SynExpr.YieldOrReturn (_,_,m)
         | SynExpr.YieldOrReturnFrom (_,_,m)
-        | SynExpr.LetOrUseBang  (_,_,_,_,_,m)
+        | SynExpr.LetOrUseBang  (_,_,_,_,m)
         | SynExpr.DoBang  (_,m) -> m
         | SynExpr.Ident id -> id.idRange
 
@@ -1028,6 +1033,7 @@ let rec IsControlFlowExpression e =
     | SynExpr.IfThenElse _ 
     | SynExpr.LetOrUseBang _
     | SynExpr.Match _  
+    | SynExpr.MatchBang _  
     | SynExpr.TryWith _ 
     | SynExpr.TryFinally _ 
     | SynExpr.For _ 
@@ -1177,6 +1183,13 @@ let opNameParenGet  = CompileOpName parenGet
 let opNameQMark = CompileOpName qmark
 let mkSynLidGet m path n = SynExpr.LongIdent(false,pathToSynLid m path @ [mkSynId m n],m)
 let mkSynOperator opm oper = mkSynIdGet opm (CompileOpName oper)
+let mkSynItem m n = SynExpr.Ident(Ident(n, m))
+
+let mkSynLocalBinding pat expr body m =
+    let svd = SynValData(None, SynValInfo([], SynArgInfo([], false, None)), None)
+    let bind = Binding(None, NormalBinding, false, false, [], PreXmlDocEmpty, svd, pat, None, expr, m, NoSequencePointAtLetBinding)
+    SynExpr.LetOrUse(false, false, [bind], body, m)
+
 
 // 'false' in SynExpr.App means that operators are never high-precedence applications
 let mkSynInfix opm m l oper r = SynExpr.App (ExprAtomicFlag.NonAtomic, SynExpr.App (ExprAtomicFlag.NonAtomic, mkSynOperator opm oper,l,m), r,m)

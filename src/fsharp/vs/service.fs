@@ -298,7 +298,7 @@ module internal TokenClassifications =
         | INFIX_STAR_DIV_MOD_OP _ | INFIX_AMP_OP _ | AMP   | AMP_AMP  | BAR_BAR  | LESS  _ | GREATER _ | QMARK | QMARK_QMARK | COLON_QMARK
         | DOT_DOT       | QUOTE   | STAR  | HIGH_PRECEDENCE_TYAPP 
         | COLON    | COLON_EQUALS   | LARROW   | EQUALS | RQUOTE_DOT _
-        | MINUS | ADJACENT_PREFIX_OP _   | FUNKY_OPERATOR_NAME _
+        | MINUS | ADJACENT_PREFIX_OP _   | FUNKY_OPERATOR_NAME _ | BANG
 
           -> (TokenColorKind.Operator,TokenCharKind.Operator,TriggerClass.None)
 
@@ -342,7 +342,7 @@ module internal TokenClassifications =
         | ELIF | RARROW | SIG | STRUCT 
         | UPCAST   | DOWNCAST   | NULL   | RESERVED    | MODULE    | AND    | AS   | ASSERT   | ASR
         | DOWNTO   | EXCEPTION   | FALSE   | FOR   | FUN   | FUNCTION
-        | FINALLY   | LAZY   | MATCH  | MUTABLE   | NEW   | OF    | OPEN   | OR | VOID | EXTERN
+        | FINALLY   | LAZY   | MATCH | MATCH_BANG  | MUTABLE   | NEW   | OF    | OPEN   | OR | VOID | EXTERN
         | INTERFACE | REC   | TO   | TRUE   | TRY   | TYPE   |  VAL   | INLINE   | WHEN  | WHILE   | WITH
         | IF | THEN  | ELSE | DO | DONE | LET(_) | IN (*| NAMESPACE*)
         | HIGH_PRECEDENCE_PAREN_APP
@@ -3140,6 +3140,7 @@ type internal UntypedParseInfo(parsed:UntypedParseResults, syncop:(unit -> unit)
                       yield! walkExpr true e2; 
                   | SynExpr.Lambda (_,_,_,e,_) -> 
                       yield! walkExpr true e; 
+                  | SynExpr.MatchBang (spBind,e,cl,_) 
                   | SynExpr.Match (spBind,e,cl,_,_) ->
                       yield! walkBindSeqPt spBind
                       yield! walkExpr false e; 
@@ -3182,9 +3183,10 @@ type internal UntypedParseInfo(parsed:UntypedParseResults, syncop:(unit -> unit)
                       yield! walkExpr false e2; 
                       yield! walkExpr false e3; 
 
-                  | SynExpr.LetOrUseBang  (spBind,_,_,e1,e2,_) -> 
+                  | SynExpr.LetOrUseBang  (spBind,_,bindings,e2,_) -> 
                       yield! walkBindSeqPt spBind
-                      yield! walkExpr true e1
+                      for _, e1 in bindings do
+                        yield! walkExpr true e1
                       yield! walkExpr true e2 ]
             
             // Process a class declaration or F# type declaration
