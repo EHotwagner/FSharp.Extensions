@@ -5341,11 +5341,6 @@ and TcObjectExprBinding cenv (env: TcEnv) implty tpenv (absSlotInfo,bind) =
         TcNormalizedBinding ObjectExpressionOverrideBinding cenv env tpenv bindingTy None NoSafeInitInfo ([],flex) bind
 
     // 4c. generalize the binding - only relevant when implementing a generic virtual method 
-    
-    // Bugfix: Prevent generalization of type arguments given to the object expression
-    // (i.e. in { new IFoo<_> ... } the "_" bit should be inferred from context)
-    let env = AddDeclaredTypars CheckForDuplicateTypars declaredTypars env
-
     match NameMap.range nameToPrelimValSchemeMap with 
     | [PrelimValScheme1(id,_,_,_,_,_,_,_,_,_,_)] -> 
         let denv = env.DisplayEnv
@@ -5447,6 +5442,10 @@ and TcObjectExpr cenv ty env tpenv (objTy,argopt,binds,extraImpls,m) =
     if not (isAppTy cenv.g objTy') then error(Error(FSComp.SR.tcNewMustBeUsedWithNamedType(),m));
     if not (isRecdTy cenv.g objTy') && not (isInterfaceTy cenv.g objTy') && isSealedTy cenv.g objTy' then errorR(Error(FSComp.SR.tcCannotCreateExtensionOfSealedType(),m));
     
+    // Bugfix: Prevent generalization of type arguments given to the object expression
+    // (i.e. in { new IFoo<_> ... } the "_" bit should be inferred from context)
+    let env = { env with eUngeneralizableItems = add_free_item_of_typ objTy' env.eUngeneralizableItems }
+
     CheckSuperType cenv objTy' objTy.Range; 
        
     // Object expression members can access protected members of the implemented type 
