@@ -5342,6 +5342,10 @@ and TcObjectExprBinding cenv (env: TcEnv) implty tpenv (absSlotInfo,bind) =
 
     // 4c. generalize the binding - only relevant when implementing a generic virtual method 
     
+    // Bugfix: Prevent generalization of type arguments given to the object expression
+    // (i.e. in { new IFoo<_> ... } the "_" bit should be inferred from context)
+    let env = AddDeclaredTypars CheckForDuplicateTypars declaredTypars env
+
     match NameMap.range nameToPrelimValSchemeMap with 
     | [PrelimValScheme1(id,_,_,_,_,_,_,_,_,_,_)] -> 
         let denv = env.DisplayEnv
