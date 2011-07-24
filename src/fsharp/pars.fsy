@@ -2106,7 +2106,7 @@ atomicPattern:
   | quoteExpr 
       { SynPat.QuoteExpr($1,lhs(parseState)) } 
   | CHAR DOT_DOT CHAR { SynPat.DeprecatedCharRange ($1,$3,rhs2 parseState 1 3) }
-  | BANG constrPattern { SynPat.Bang ($2, rhs2 parseState 1 2) }
+  | QMARK { SynPat.QWild(lhs(parseState)) }
   | LBRACE recordPatternElements RBRACE
       { $2 }
   | LBRACK listPatternElements RBRACK

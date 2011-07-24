@@ -4464,7 +4464,7 @@ and TcPat warnOnUpper cenv env topValInfo vFlags (tpenv,names,takenNames) ty pat
         errorR(Error(FSComp.SR.tcIllegalPattern(),pat.Range));
         (fun _ -> TPat_wild m), (tpenv,names,takenNames)
 
-    | SynPat.Bang (_,m) -> 
+    | SynPat.QWild (m) -> 
         errorR(Error(FSComp.SR.tcIllegalPattern(),pat.Range));
         (fun _ -> TPat_wild m), (tpenv,names,takenNames)
 
@@ -6113,10 +6113,25 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                 let exprsWithVars = [ for e in exprs -> e, mkSynNewArgVar m ]
                 let exprs = [ for _, (_, e) in exprsWithVars -> e ]
 
-                // Function to be called later to wrap bindings around generated expr
-                let wrapWithBindings initialBody =
+
+                // If the computation defines 'Alias' and 'Bind' then we wrap all arguments 
+                // using aliasing. Ohterwise, we just wrap them using 'let' to avoid effects.
+                // The function is called later after the body is defined.
+                let wrapWithLetBindings initialBody =
                     List.foldBack (fun (inite, (vpat, _)) body ->
-                        mkSynLocalBinding vpat inite body m) exprsWithVars initialBody    
+                      mkSynLocalBinding vpat inite body m) exprsWithVars initialBody    
+
+                // Function to be called later to wrap bindings around generated expr
+                let wrapWithAliasBindings initialBody =
+                    List.foldBack (fun (inite, (vpat, _)) body ->
+                      let clause = Clause(vpat, None, body, m, SequencePointAtTarget)
+                      let bodyFunc = mkSynMatchLambda(false,false,m,[clause],spMatch)                            
+                      let aliased = mksynCall "Alias" m [inite]
+                      mksynCall "Bind" m [aliased; bodyFunc]) exprsWithVars initialBody    
+
+                let wrapWithBindings = 
+                  if isOperationAvailable "Alias" && isOperationAvailable "Bind" 
+                  then wrapWithAliasBindings else wrapWithLetBindings
                                     
                 // --------------------------------------------------------------------------------
                 // Translate clause using the following rule:
@@ -6132,8 +6147,8 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                 //
                 let (|BangPatternSequence|_|) pat =
                   match pat with 
-                  | SynPat.Bang(_, clauseM) as bangPat -> Some([bangPat], clauseM) 
                   | SynPat.Tuple(pats, clauseM) -> Some(pats, clauseM)
+                  | pat -> Some([pat], pat.Range) 
                   | _ -> None
 
                 let translatedCaluses = 
@@ -6144,28 +6159,18 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                           // Collect match! arguments & corresponding patterns
                           // (for "!<pat>" locations in the pattern list)
                           let bindPats = (List.zip pats exprs) |> List.choose (function 
-                            | (SynPat.Bang(p, _), e) -> Some(p, e) 
-                            | (SynPat.Wild _, _) -> None
-                            | (pat, _) -> 
-                                 errorR(Error((0, "Only bang-patterns and wildcard patterns are allowed in 'match!'"), pat.Range))
-                                 None )
-
-                          // --------------------------------------------------
-                          // Check for various error conditions 
+                            | (SynPat.QWild _, _) -> None
+                            | (p, e) -> Some(p, e))
 
                           // Empty patterns are not supported
                           if List.length bindPats = 0 then
                               errorR(Error((0, "Clause consisting of ignore patterns only is not allowed."),m))                    
 
-                          // To handle more than 1 pattern, we'll need 'Merge'
-                          if List.length bindPats > 1 then ensureOperationExists "Merge" clauseM
-                          ensureOperationExists "Bind" clauseM
-                          ensureOperationExists "Return" clauseM
-                          ensureOperationExists "Fail" clauseM
-                          ensureOperationExists "Delay" clauseM
-                              
                           // --------------------------------------------------
                           // Implements the translation
+
+                          // To handle more than 1 pattern, we'll need 'Merge'
+                          if List.length bindPats > 1 then ensureOperationExists "Merge" clauseM
 
                           // Merge all monadic values given as parameters
                           let (inputPat, inputVal) = 
@@ -6173,18 +6178,48 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                               let resE = mksynCall "Merge" pat.Range [currentExpr; expr]  
                               let resP = SynPat.Tuple([currentPat; pat], clauseM)
                               resP, resE) 
+                          
+                          // Translate the body of the clause
+                          if isOperationAvailable "Bind" then 
+                            // If we have 'Bind' translate clauses as follows:
+                            //   Bind(<merged>, function <pats> -> Return (Delay (fun () -> ...))
+                            //                           | _ -> Fail)
+                            ensureOperationExists "Return" clauseM
+                            ensureOperationExists "Fail" clauseM
+                            ensureOperationExists "Delay" clauseM
                               
-                          // Create pattern matching returning body computation or fail
-                          let bodyFunc = mkSynMatchLambda(false,false,clauseM,[Clause(SynPat.Wild clauseM, None, trans body, body.Range, SequencePointAtTarget)], spMatch)                        
-                          let succBody = mksynCall "Return" clauseM [mksynCall "Delay" clauseM [bodyFunc]]
-                          let failBody = mksynCall "Fail" clauseM []
-                          let bodyClauses =
-                            [ Clause(inputPat, optWhen, succBody, range, spClause);
-                              Clause(SynPat.Wild clauseM, None, failBody, range, spClause) ]
+
+                            // Create pattern matching returning body computation or fail
+                            let bodyFunc = mkSynMatchLambda(false,false,clauseM,[Clause(SynPat.Wild clauseM, None, trans body, body.Range, SequencePointAtTarget)], spMatch)
+                            let succBody = mksynCall "Return" clauseM [mksynCall "Delay" clauseM [bodyFunc]]
+                            let failBody = mksynCall "Fail" clauseM []
+                            let bodyClauses =
+                              [ Clause(inputPat, optWhen, succBody, range, spClause);
+                                Clause(SynPat.Wild clauseM, None, failBody, range, spClause) ]
                                 
-                          let consumeExpr = mkSynMatchLambda(false,false,clauseM,bodyClauses,spMatch)                              
-                          let translated = mksynCall "Bind" clauseM [inputVal; consumeExpr]
-                          yield translated
+                            let consumeExpr = mkSynMatchLambda(false,false,clauseM,bodyClauses,spMatch)                              
+                            let translated = mksynCall "Bind" clauseM [inputVal; consumeExpr]
+                            yield translated
+
+                          elif isOperationAvailable "Select" then
+                            // If we have 'Select', we translate clauses as follows:
+                            //   Select(<merged>, function <succ-pats> -> ...)
+
+                            // This can only be used if the body is a pure function
+                            let body = 
+                              match tryTransProjection body with 
+                              | Some body -> body
+                              | _ -> error(Error(FSComp.SR.tcRequireBuilderMethod("Bind"), m))
+     
+                            // Body contains just one clause (missing pattern is an error)
+                            let bodyClauses = [ Clause(inputPat, optWhen, body, range, spClause) ]
+                            let consumeExpr = mkSynMatchLambda(false,false,clauseM,bodyClauses,spMatch)
+                            let translated = mksynCall "Select" clauseM [inputVal; consumeExpr]
+                            yield translated
+
+                          else 
+                            // We need at least one of them...
+                            error(Error(FSComp.SR.tcRequireBuilderMethod("Select' or 'Bind"), m))
 
                       | SynPat.Tuple _ ->
                           errorR(Error((0, "Mismatching number of arguments and computation patterns."),m))
@@ -6210,20 +6245,25 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                   translatedCaluses |> List.reduce (fun currentClause clause ->  
                     mksynCall "Choose" m [currentClause; clause]) 
                 
-                // Generate
-                //   if 'Run' member is available then: x.Bind(<reduced>, fun #newVar -> x.Run(#newVar))
-                //   otherwise generate just: x.Bind(<reduced>, id)
-                let runLambda = 
-                  match TryFindIntrinsicOrExtensionMethInfo cenv env interpVarRange ad "Run" interpExprTy with 
-                  | [] -> mkSynItem m "id"
-                  | _ -> 
-                      let pat, expr = mkSynNewArgVar m
-                      let runBody = mksynCall "Run" m [expr]
-                      let lambdClause = Clause(pat, None, runBody, m, SuppressSequencePointAtTarget)
-                      mkSynMatchLambda(false, false, m, [ lambdClause ], spMatch)
+                if isOperationAvailable "Bind" then
+                  // If 'Bind' is defined, generate:
+                  //   if 'Run' member is available then: x.Bind(<reduced>, fun #newVar -> x.Run(#newVar))
+                  //   otherwise generate just: x.Bind(<reduced>, id)
+                  let runLambda = 
+                    match TryFindIntrinsicOrExtensionMethInfo cenv env interpVarRange ad "Run" interpExprTy with 
+                    | [] -> mkSynItem m "id"
+                    | _ -> 
+                        let pat, expr = mkSynNewArgVar m
+                        let runBody = mksynCall "Run" m [expr]
+                        let lambdClause = Clause(pat, None, runBody, m, SuppressSequencePointAtTarget)
+                        mkSynMatchLambda(false, false, m, [ lambdClause ], spMatch)
 
-                mksynCall "Bind" m [reducedClauses; runLambda]
-                |> wrapWithBindings |> Some
+                  mksynCall "Bind" m [reducedClauses; runLambda]
+                  |> wrapWithBindings |> Some
+                else
+                  // Return the clauses combined using 'choose' as they are
+                  reducedClauses
+                  |> wrapWithBindings |> Some
                 
             | _ -> None
         and trans c = 

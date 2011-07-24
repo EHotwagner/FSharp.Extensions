@@ -495,15 +495,16 @@ and
     | DeprecatedCharRange of char * char * range
     /// Used internally in the type checker
     | InstanceMember of  Ident * Ident * (* holds additional ident for tooling *) Ident option * SynAccess option * range (* adhoc overloaded method/property *)
-    /// !<pattern> extension for joinads
-    | Bang of SynPat * range
+    
+    /// '?' extension for joinads
+    | QWild of range
 
     member p.Range = 
       match p with 
       | SynPat.Const(_,m) | SynPat.Wild m | SynPat.Named (_,_,_,_,m) | SynPat.Or (_,_,m) | SynPat.Ands (_,m) 
       | SynPat.LongIdent (_,_,_,_,_,m) | SynPat.ArrayOrList(_,_,m) | SynPat.Tuple (_,m) |SynPat.Typed(_,_,m) |SynPat.Attrib(_,_,m) 
       | SynPat.Record (_,m) | SynPat.DeprecatedCharRange (_,_,m) | SynPat.Null m | SynPat.IsInst (_,m) | SynPat.QuoteExpr (_,m)
-      | SynPat.InstanceMember(_,_,_,_,m) | SynPat.OptionalVal(_,m) | SynPat.Paren(_,m) | SynPat.Bang(_, m) -> m 
+      | SynPat.InstanceMember(_,_,_,_,m) | SynPat.OptionalVal(_,m) | SynPat.Paren(_,m) | SynPat.QWild(m) -> m 
 
 and  
     [<NoEquality; NoComparison>]

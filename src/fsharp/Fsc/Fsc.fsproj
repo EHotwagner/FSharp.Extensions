@@ -32,8 +32,8 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <StartAction>Project</StartAction>
-    <StartWorkingDirectory>C:\Tomas\Research\Joinads\FSharp.Extensions\src</StartWorkingDirectory>
-    <StartArguments>test.fs</StartArguments>
+    <StartWorkingDirectory>C:\Tomas\Research\Joinads\</StartWorkingDirectory>
+    <StartArguments>Async.fsx</StartArguments>
   </PropertyGroup>
   <ItemGroup>
     <FsSrGen Include="..\FSCstrings.txt">
