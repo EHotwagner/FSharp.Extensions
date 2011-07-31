@@ -2101,12 +2101,15 @@ atomicPatterns:
         $1 :: $3 } 
   | atomicPattern { [$1] }
 
-
+qmarkBody:
+  | ident { (fun m -> SynPat.OptionalVal($1,m)) } 
+  |       { SynPat.QWild }
+  
 atomicPattern:
   | quoteExpr 
       { SynPat.QuoteExpr($1,lhs(parseState)) } 
   | CHAR DOT_DOT CHAR { SynPat.DeprecatedCharRange ($1,$3,rhs2 parseState 1 3) }
-  | QMARK { SynPat.QWild(lhs(parseState)) }
+  | QMARK qmarkBody { $2 (lhs(parseState)) }
   | LBRACE recordPatternElements RBRACE
       { $2 }
   | LBRACK listPatternElements RBRACK
@@ -2114,7 +2117,6 @@ atomicPattern:
   | LBRACK_BAR listPatternElements  BAR_RBRACK
       { SynPat.ArrayOrList(true,$2, lhs(parseState)) }
   | UNDERSCORE { SynPat.Wild (lhs(parseState)) }
-  | QMARK ident { SynPat.OptionalVal($2,lhs(parseState)) } 
   | atomicPatternLongIdent %prec prec_atompat_pathop 
       { let vis,lid = $1 
         if List.length lid > 1 || (let c = (List.head lid).idText.[0] in Char.IsUpper(c) && not (Char.IsLower c)) 
@@ -2128,6 +2130,11 @@ atomicPattern:
       { SynPat.Const(SynConst.Bool true,lhs(parseState)) } 
   | NULL 
       { SynPat.Null(lhs(parseState)) }
+  | LPAREN QMARK RPAREN 
+      { // Special case to parse '(?)' as an identifier in 'let (?) foo = bar'
+        let m = lhs(parseState) 
+        let q = SynPat.Named(SynPat.Wild m, ident(CompileOpName "?",rhs parseState 2), false, None, m)
+        SynPat.Paren(q, m) } 
   | LPAREN parenPatternBody RPAREN 
       {  let m = (lhs(parseState)) in SynPat.Paren($2 m,m) } 
   | LPAREN parenPatternBody recover 
