@@ -13,6 +13,11 @@ config.status
 *.fsy.bak
 *.fsl.bak
 *.fsproj.bak
+*.sln.bak
+*.targets.bak
+*.proj.bak
+*.txt.bak
+src/fsharp/unittests/UnittestsGeneratedInterfaceFileToTestGotoDefinition.ReservedName.fsi
 
 # build results on windows
 Debug/

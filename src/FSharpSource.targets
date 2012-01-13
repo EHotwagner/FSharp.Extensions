@@ -21,7 +21,11 @@
     <VersionFile>$(FSharpSourcesRoot)\source-build-version</VersionFile>
     <FsLexUnicode>true</FsLexUnicode>
     <StrongNames Condition="'$(StrongNames)' == '' AND !Exists('$(FSharpSourcesRoot)\mono.snk')">false</StrongNames>
-    <StrongNames Condition="'$(StrongNames)' == '' AND Exists('$(FSharpSourcesRoot)\mono.snk') AND '$(TargetFramework)' != 'Silverlight\4.0\Compiler'">true</StrongNames>
+    <StrongNames Condition="'$(StrongNames)' == '' AND Exists('$(FSharpSourcesRoot)\mono.snk') AND 
+                            '$(TargetFramework)' != 'Silverlight\4.0\Compiler' AND 
+                            '$(TargetFramework)' != 'Silverlight\5.0\Compiler'">
+      true
+    </StrongNames>
     <DefineConstants Condition="'$(StrongNames)' != 'true'">NO_STRONG_NAMES;$(DefineConstants)</DefineConstants>
     <ProjectLanguage>FSharp</ProjectLanguage>
     <OtherFlags>$(OtherFlags) --times</OtherFlags>
@@ -91,7 +95,8 @@
   </PropertyGroup>
 
   <!-- Target Silverlight 4.0 -->
-  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\4.0' OR '$(TargetFramework)'=='Silverlight\4.0\Compiler'">
+  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\4.0' OR 
+                            '$(TargetFramework)'=='Silverlight\4.0\Compiler'">
     <DefineConstants>$(DefineConstants);SILVERLIGHT;FX_NO_ARRAY_LONG_LENGTH;FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE;FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS;FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES;FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS;FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING;FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START;FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS;FX_FSLIB_IOBSERVABLE</DefineConstants>
     <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
@@ -99,13 +104,15 @@
   </PropertyGroup>
 
   <!-- Target Silverlight 5.0 -->
-  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\5.0'">
+  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\5.0' OR 
+                            '$(TargetFramework)'=='Silverlight\5.0\Compiler'">
     <DefineConstants>$(DefineConstants);FX_ATLEAST_SILVERLIGHT_20_BETA2;SILVERLIGHT</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_ATLEAST_SILVERLIGHT_50</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_ARRAY_LONG_LENGTH;FX_FSLIB_IOBSERVABLE</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES</DefineConstants>
-    <DefineConstants>$(DefineConstants);FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START</DefineConstants>
     <DefineConstants>$(DefineConstants);FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS</DefineConstants>
@@ -167,7 +174,12 @@
   <Import Project="..\Proto\$(protoCLIDir)\bin\Microsoft.FSharp-proto.Targets" Condition="'$(BuildWith)' == '' And '$(ProjectLanguage)' == 'FSharp' "/>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="'$(BuildWith)' == 'LKG' And '$(ProjectLanguage)' == 'FSharp' AND !Exists('$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll') " />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="'$(BuildWith)' == 'LKG' And '$(ProjectLanguage)' == 'FSharp' AND Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.Common.targets"  Condition="'$(TargetFramework)'=='Silverlight\3.0' or '$(TargetFramework)'=='Silverlight\4.0'  or '$(TargetFramework)'=='Silverlight\4.0\Compiler'  or '$(TargetFramework)'=='Silverlight\5.0'"/>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.Common.targets"
+          Condition="'$(TargetFramework)'=='Silverlight\3.0' or 
+                     '$(TargetFramework)'=='Silverlight\4.0' or 
+                     '$(TargetFramework)'=='Silverlight\4.0\Compiler' or 
+                     '$(TargetFramework)'=='Silverlight\5.0' or 
+                     '$(TargetFramework)'=='Silverlight\5.0\Compiler'"/>
 
  
   <!-- Reference an existing FSI.EXE for use from within MSBuild -->
@@ -181,7 +193,8 @@
 
 
   <!-- Build with proto compiler, but running with mono -->
-  <PropertyGroup Condition=" '$(BuildWith)' == '' and ('$(TargetFramework)'=='mono\2.0' or '$(TargetFramework)'=='mono\4.0')">
+  <PropertyGroup Condition=" '$(BuildWith)' == '' and ('$(TargetFramework)'=='mono\2.0' or 
+                                                       '$(TargetFramework)'=='mono\4.0')">
     <!-- <OtherFlags>$(OtherFlags) /resident</OtherFlags> -->
     <FscToolExe>fsc-proto-mono.bat</FscToolExe>
     <FsLexToolExe>fslex-mono.bat</FsLexToolExe>
@@ -189,7 +202,8 @@
   </PropertyGroup>
 
   <!-- Build with LKG compiler, but running with mono -->
-  <PropertyGroup Condition=" '$(BuildWith)' == 'LKG' and ('$(TargetFramework)'=='mono\2.0' or '$(TargetFramework)'=='mono\4.0')">
+  <PropertyGroup Condition=" '$(BuildWith)' == 'LKG' and ('$(TargetFramework)'=='mono\2.0' or 
+                                                          '$(TargetFramework)'=='mono\4.0')">
     <FscToolExe>fsc-mono.bat</FscToolExe>
     <FsLexToolExe>fslex-mono.bat</FsLexToolExe>
     <FsYaccToolExe>fsyacc-mono.bat</FsYaccToolExe>
@@ -211,7 +225,18 @@
             Condition="'$(Configuration)'!='Release' and '$(Configuration)'!='Debug' and '$(Configuration)'!='Proto'"/>
     <Error
             Text="TargetFramework '$(TargetFramework)' is not one of the supported configurations: 'empty', cli\2.0, cli\4.0, Silverlight/3.0, CompactFramework/3.5, WindowsPhone7\Silverlight\4.0"
-            Condition="! ('$(TargetFramework)' == 'cli\4.0' or '$(TargetFramework)' == 'cli\2.0' or '$(TargetFramework)' == 'mono\4.0' or '$(TargetFramework)' == 'mono\2.0' or '$(TargetFramework)' == 'Silverlight\3.0' or '$(TargetFramework)' == 'Silverlight\4.0' or '$(TargetFramework)' == 'Silverlight\4.0\Compiler' or '$(TargetFramework)' == 'Silverlight\5.0' or '$(TargetFramework)' == 'CompactFramework\2.0' or '$(TargetFramework)' == 'CompactFramework\3.5' or '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0')"/>
+            Condition="! ('$(TargetFramework)' == 'cli\4.0' or 
+                          '$(TargetFramework)' == 'cli\2.0' or 
+                          '$(TargetFramework)' == 'mono\4.0' or 
+                          '$(TargetFramework)' == 'mono\2.0' or 
+                          '$(TargetFramework)' == 'Silverlight\3.0' or 
+                          '$(TargetFramework)' == 'Silverlight\4.0' or 
+                          '$(TargetFramework)' == 'Silverlight\4.0\Compiler' or 
+                          '$(TargetFramework)' == 'Silverlight\5.0' or 
+                          '$(TargetFramework)' == 'Silverlight\5.0\Compiler' or 
+                          '$(TargetFramework)' == 'CompactFramework\2.0' or 
+                          '$(TargetFramework)' == 'CompactFramework\3.5' or 
+                          '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0')"/>
   </Target>
 
   <!-- This build step copies files to the output folder while replacing build variables in the text of

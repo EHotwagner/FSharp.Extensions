@@ -1,0 +1,18 @@
+started C:\fsharp\vs2010-rtm-oss\src\tests\build-and-run-all-installed-ilx-configs.bat 
+31/07/2011 
+19:06
+  
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\patterns
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\subtype
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\tlr
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\parsing
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\math
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\math\lapack
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\math\numbers
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\resources
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\apporder
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\pinvoke
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\array
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\int32
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\map
+C:\fsharp\vs2010-rtm-oss\src\tests\fsharp\core\libtest

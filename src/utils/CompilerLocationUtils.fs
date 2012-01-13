@@ -17,12 +17,6 @@ module internal FSharpEnvironment =
 
 #endif
 
-    let FSharpCoreLibRunningVersion = 
-        try match (typeof<Microsoft.FSharp.Collections.List<int>>).Assembly.GetName().Version.ToString() with
-            | null -> None
-            | "" -> None
-            | s  -> Some(s)
-        with _ -> None
 
     // The F# team version number. This version number is used for
     //     - the F# version number reported by the fsc.exe and fsi.exe banners in the CTP release
@@ -43,7 +37,19 @@ module internal FSharpEnvironment =
     let FSharpBinaryMetadataFormatRevision = "2.0.0.0"
 
 #if SILVERLIGHT
+    let Get32BitRegistryStringValueViaPInvoke(_subKey:string) = 
+        None
+    let BinFolderOfDefaultFSharpCompiler = 
+        Some ""
 #else
+
+    let FSharpCoreLibRunningVersion = 
+        try match (typeof<Microsoft.FSharp.Collections.List<int>>).Assembly.GetName().Version.ToString() with
+            | null -> None
+            | "" -> None
+            | s  -> Some(s)
+        with _ -> None
+
     [<DllImport("Advapi32.dll", CharSet = CharSet.Unicode, BestFitMapping = false)>]
     extern uint32 RegOpenKeyExW(UIntPtr _hKey, string _lpSubKey, uint32 _ulOptions, int _samDesired, UIntPtr & _phkResult);
 
@@ -97,13 +103,8 @@ module internal FSharpEnvironment =
                 System.Diagnostics.Debug.Assert(false, sprintf "Failed in Get32BitRegistryStringValueViaDotNet: %s" (e.ToString()))
                 null)
 #endif
-#endif // SILVERLIGHT
 
 
-#if SILVERLIGHT
-    let Get32BitRegistryStringValueViaPInvoke(_subKey:string) = 
-        None
-#else        
     let Get32BitRegistryStringValueViaPInvoke(subKey:string) = 
         Option.ofString
             (try 
@@ -141,9 +142,9 @@ module internal FSharpEnvironment =
                 System.Diagnostics.Debug.Assert(false, sprintf "Failed in Get32BitRegistryStringValueViaPInvoke: %s" (e.ToString()))
                 null)
 
-    let is32Bit = IntPtr.Size = 4
+    let private is32Bit = (IntPtr.Size = 4)
     
-    let tryRegKey(subKey:string) = 
+    let private tryRegKey(subKey:string) = 
 
         if is32Bit then
             let s = GetDefaultRegistryStringValueViaDotNet(subKey)
@@ -171,14 +172,14 @@ module internal FSharpEnvironment =
 #endif
                
 
-    let internal tryCurrentDomain() = 
+    let private tryCurrentDomain() = 
         let pathFromCurrentDomain = System.AppDomain.CurrentDomain.BaseDirectory
         if not(String.IsNullOrEmpty(pathFromCurrentDomain)) then 
             Some pathFromCurrentDomain
         else
             None
     
-    let internal tryAppConfig (appConfigKey:string) = 
+    let private tryAppConfig (appConfigKey:string) = 
 
         let locationFromAppConfig = ConfigurationSettings.AppSettings.[appConfigKey]
         System.Diagnostics.Debug.Print(sprintf "Considering appConfigKey %s which has value '%s'" appConfigKey locationFromAppConfig) 

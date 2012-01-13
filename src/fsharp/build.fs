@@ -1526,7 +1526,11 @@ let SystemAssemblies (mscorlibAssemblyName, mscorlibMajorVersion,mscorlibMinorVe
       // Include System.Observable in the potential-system-assembly set
       // on WP7.  Note that earlier versions of silverlight did not have this DLL, but
       // it is OK to over-approximate the system assembly set.
+#if FX_ATLEAST_SILVERLIGHT_50
+      if mscorlibMajorVersion = 5 && mscorlibMinorVersion = 0 && mscorlibRevisionVersion = 5 then 
+#else
       if mscorlibMajorVersion = 2 && mscorlibMinorVersion = 0 && mscorlibRevisionVersion = 5 then 
+#endif
           yield "System.Observable"
       if mscorlibMajorVersion >= 4 then 
           yield "System.Numerics"] 
@@ -1561,7 +1565,11 @@ let (++) x s = x @ [s]
 open Microsoft.Win32
 let highestInstalledNetFrameworkVersionMajorMinor() =
 #if SILVERLIGHT
+#if FX_ATLEAST_SILVERLIGHT_50
+    4,0,5,"v5.0"
+#else
     2,0,5,"v2.0"
+#endif
 #else    
 
 #if FX_ATLEAST_40  
@@ -2226,6 +2234,9 @@ type TcConfig private (data : TcConfigBuilder,validate:bool) =
 
 
     member x.MscorlibMajorVersion = mscorlibMajorVersion
+    member x.MscorlibMinorVersion = mscorlibMinorVersion
+    member x.MscorlibRevisionVersion = mscorlibRevisionVersion
+
     member x.mscorlibAssemblyName = data.mscorlibAssemblyName
     member x.autoResolveOpenDirectivesToDlls = data.autoResolveOpenDirectivesToDlls
     member x.noFeedback = data.noFeedback
@@ -2496,7 +2507,7 @@ type TcConfig private (data : TcConfigBuilder,validate:bool) =
             let targetFrameworkMajorMinor = tcConfig.targetFrameworkVersionMajorMinor
 
 #if DEBUG
-            assert( Set.contains targetFrameworkMajorMinor (set ["v2.0";"v3.0";"v3.5";"v4.0"]) ) // Resolve is flexible, but pinning down targetFrameworkMajorMinor.
+            //assert( Set.contains targetFrameworkMajorMinor (set ["v2.0";"v3.0";"v3.5";"v4.0"]) ) // Resolve is flexible, but pinning down targetFrameworkMajorMinor.
 #endif
 
             let targetProcessorArchitecture = 
@@ -2990,8 +3001,8 @@ type TcAssemblyResolutions(results : AssemblyResolution list, unresolved : Unres
                   yield AssemblyReference(rangeStartup,s)
 
           if tcConfig.framework || tcConfig.addVersionSpecificFrameworkReferences then 
-              // For out-of-project context, then always reference some extra DLLs on .NET 4.0 
-              if tcConfig.MscorlibMajorVersion >= 4 then 
+              // For out-of-project context, then always reference some extra DLLs on .NET 4.0, but not Silverlight 5.0
+              if tcConfig.MscorlibMajorVersion >= 4 && not (tcConfig.MscorlibMinorVersion = 0 && tcConfig.MscorlibRevisionVersion = 5)   then 
                   for s in DefaultBasicReferencesForOutOfProjectSources40 do 
                       yield AssemblyReference(rangeStartup,s+".dll") 
 
@@ -3994,24 +4005,15 @@ module private ScriptPreprocessClosure =
     /// Create a TcConfig for load closure starting from a single .fsx file
     let CreateScriptSourceTcConfig(filename:string,editing:bool) =  
         let projectDir = Path.GetDirectoryName(filename)
-#if SILVERLIGHT
-        let tcConfigB = TcConfigBuilder.CreateNew("", true (* optimize for memory *), projectDir) 
-#else        
         let tcConfigB = TcConfigBuilder.CreateNew(Internal.Utilities.FSharpEnvironment.BinFolderOfDefaultFSharpCompiler.Value, true (* optimize for memory *), projectDir) 
-#endif        
         BasicReferencesForScriptLoadClosure |> List.iter(fun f->
             // Mono uses simpleresolution, which expects .dll extensions, but the basic references do not have this extension
             let f = if runningOnMono then f + ".dll" else f
             tcConfigB.AddReferencedAssemblyByPath(range0,f)) // Add script references
         tcConfigB.resolutionEnvironment <-
             if editing
-#if SILVERLIGHT            
-            then DesigntimeLike
-            else RuntimeLike
-#else            
             then MSBuildResolver.DesigntimeLike
             else MSBuildResolver.RuntimeLike
-#endif            
         tcConfigB.framework <- false; 
         // Indicates that there are some references not in BasicReferencesForScriptLoadClosure which should
         // be added conditionally once the relevant version of mscorlib.dll has been detected.

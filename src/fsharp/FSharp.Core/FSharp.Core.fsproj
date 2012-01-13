@@ -22,8 +22,8 @@
     <OutputType>Library</OutputType>
     <AssemblyName>FSharp.Core</AssemblyName>
     <DefineConstants>RUNTIME;$(DefineConstants)</DefineConstants>
-    <DefineConstants Condition=" '$(TargetFramework)'=='Silverlight\4.0\Compiler'">EXTRAS_FOR_SILVERLIGHT_COMPILER;$(DefineConstants)</DefineConstants>
-    <OtherFlags Condition=" '$(TargetFramework)'=='Silverlight\4.0\Compiler'">$(OtherFlags) --nodebugdata</OtherFlags>
+    <DefineConstants Condition=" '$(TargetFramework)'=='Silverlight\4.0\Compiler' or '$(TargetFramework)'=='Silverlight\5.0\Compiler'">EXTRAS_FOR_SILVERLIGHT_COMPILER;$(DefineConstants)</DefineConstants>
+    <OtherFlags Condition=" '$(TargetFramework)'=='Silverlight\4.0\Compiler' or '$(TargetFramework)'=='Silverlight\5.0\Compiler'">$(OtherFlags) --nodebugdata</OtherFlags>
     
     <NoWarn>9;35;40;44;51;57;58;60;62;65;76;77;56;1204</NoWarn>
     <BaseAddress>0x05000000</BaseAddress>
@@ -192,9 +192,9 @@
     <!-- BigInteger is in System.Numerics on .NET 4.0 -->
     <Reference Include="System.Numerics" Condition="'$(TargetFramework)' == 'cli\4.0'" />
     <!-- WebClient and WebRequest are in System.Net on Silverlight 2.0-4.0 -->
-    <Reference Include="System.Net" Condition="'$(TargetFramework)' == 'Silverlight\2.0' OR '$(TargetFramework)' == 'Silverlight\3.0' OR '$(TargetFramework)' == 'Silverlight\4.0' OR '$(TargetFramework)' == 'Silverlight\4.0\Compiler' OR '$(TargetFramework)' == 'Silverlight\5.0' OR '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0'"/>
+    <Reference Include="System.Net" Condition="'$(TargetFramework)' == 'Silverlight\2.0' OR '$(TargetFramework)' == 'Silverlight\3.0' OR '$(TargetFramework)' == 'Silverlight\4.0' OR '$(TargetFramework)' == 'Silverlight\4.0\Compiler' OR '$(TargetFramework)' == 'Silverlight\5.0' OR '$(TargetFramework)' == 'Silverlight\5.0\Compiler' OR '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0'"/>
     <!-- Lazy<T> is in System.Core on Silverlight 4.0 and beyond -->
-    <Reference Include="System.Core" Condition="'$(TargetFramework)' == 'Silverlight\4.0' OR '$(TargetFramework)' == 'Silverlight\4.0\Compiler' OR '$(TargetFramework)' == 'Silverlight\5.0' OR '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0' "/>
+    <Reference Include="System.Core" Condition="'$(TargetFramework)' == 'Silverlight\4.0' OR '$(TargetFramework)' == 'Silverlight\4.0\Compiler' OR '$(TargetFramework)' == 'Silverlight\5.0' OR '$(TargetFramework)' == 'Silverlight\5.0\Compiler' OR '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0' "/>
   </ItemGroup>
   <!-- References -->
   <Import Project="$(FSharpSourcesRoot)\FSharpSource.targets" />

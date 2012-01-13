@@ -1707,8 +1707,11 @@ type OutputCollector() =
                       output.Add (isOut, (try Some System.Console.ForegroundColor with _ -> None) ,c)) 
 #endif
               member x.Encoding = Encoding.UTF8 }
+#if FX_ATLEAST_SILVERLIGHT_50
+#else
     do System.Console.SetOut (outWriter true)
     do System.Console.SetError (outWriter false)
+#endif
     member x.GetTextAndClear() = lock output (fun () -> let res = output.ToArray() in output.Clear(); res)
 
 #if SILVERLIGHT
