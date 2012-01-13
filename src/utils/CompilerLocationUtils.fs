@@ -11,6 +11,7 @@ open System.Runtime.InteropServices
 module internal FSharpEnvironment =
 
 #if FX_ATLEAST_40 
+
     /// The .NET build string that F# was built against (e.g. "4.0.21104.0")
     let DotNetBuildString = "(private)"
 
@@ -33,7 +34,7 @@ module internal FSharpEnvironment =
     //     - for Beta2, the language revision number indicated on the F# language spec
     //
     // It is NOT the version number listed on FSharp.Core.dll
-    let FSharpTeamVersionNumber = "1.9.9.9"
+    let FSharpTeamVersionNumber = "1.9.9.11"
 
     // The F# binary format revision number. The first three digits of this form the significant part of the 
     // format revision number for F# binary signature and optimization metadata. The last digit is not significant.
@@ -41,6 +42,8 @@ module internal FSharpEnvironment =
     // WARNING: Do not change this revision number unless you absolutely know what you're doing.
     let FSharpBinaryMetadataFormatRevision = "2.0.0.0"
 
+#if SILVERLIGHT
+#else
     [<DllImport("Advapi32.dll", CharSet = CharSet.Unicode, BestFitMapping = false)>]
     extern uint32 RegOpenKeyExW(UIntPtr _hKey, string _lpSubKey, uint32 _ulOptions, int _samDesired, UIntPtr & _phkResult);
 
@@ -49,6 +52,7 @@ module internal FSharpEnvironment =
 
     [<DllImport("Advapi32.dll")>]
     extern uint32 RegCloseKey(UIntPtr _hKey)
+
 
     module Option = 
         /// Convert string into Option string where null and String.Empty result in None
@@ -61,6 +65,7 @@ module internal FSharpEnvironment =
 
     // MaxPath accounts for the null-terminating character, for example, the maximum path on the D drive is "D:\<256 chars>\0". 
     // See: ndp\clr\src\BCL\System\IO\Path.cs
+    
     let maxPath = 260;
     let maxDataLength = (new System.Text.UTF32Encoding()).GetMaxByteCount(maxPath)
     let KEY_WOW64_DEFAULT = 0x0000
@@ -76,7 +81,6 @@ module internal FSharpEnvironment =
              with e->
                 System.Diagnostics.Debug.Assert(false, sprintf "Failed in GetDefaultRegistryStringValueViaDotNet: %s" (e.ToString()))
                 null)
-
 // RegistryView.Registry API is not available before .NET 4.0
 #if FX_ATLEAST_40_COMPILER_LOCATION
     let Get32BitRegistryStringValueViaDotNet(subKey: string) =
@@ -93,9 +97,13 @@ module internal FSharpEnvironment =
                 System.Diagnostics.Debug.Assert(false, sprintf "Failed in Get32BitRegistryStringValueViaDotNet: %s" (e.ToString()))
                 null)
 #endif
+#endif // SILVERLIGHT
 
 
-
+#if SILVERLIGHT
+    let Get32BitRegistryStringValueViaPInvoke(_subKey:string) = 
+        None
+#else        
     let Get32BitRegistryStringValueViaPInvoke(subKey:string) = 
         Option.ofString
             (try 
@@ -247,4 +255,4 @@ module internal FSharpEnvironment =
         with e -> 
             System.Diagnostics.Debug.Assert(false, "Error while determining default location of F# compiler")
             None
-
+#endif // SILVERLIGHT

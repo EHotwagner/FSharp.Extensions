@@ -22,7 +22,11 @@ Copyright (C) Microsoft Corporation. All rights reserved.
 
 
     <PropertyGroup>
-		<MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildToolsPath)\Microsoft.FSharp.targets</MSBuildAllProjects>
+        <!-- FSharpTargetsDir is the directory where the targets file lives -->
+        <FSharpTargetsDir Condition="'$(FSharpTargetsDir)'==''">$(MSBuildExtensionsPath32)\FSharp\1.0\</FSharpTargetsDir>
+        <!-- FSharpTargetsFullPath is the full path (dir + filename) of the targets file -->
+        <FSharpTargetsFullPath Condition="'$(FSharpTargetsDir)'!=''">$(FSharpTargetsDir)\Microsoft.FSharp{BuildSuffix}.targets</FSharpTargetsFullPath>
+        <MSBuildAllProjects>$(MSBuildAllProjects);$(FSharpTargetsFullPath)</MSBuildAllProjects>
         <DefaultLanguageSourceExtension>.fs</DefaultLanguageSourceExtension>
         <Language>F#</Language>
         <Tailcalls Condition="'$(Tailcalls)'==''">$(Optimize)</Tailcalls>

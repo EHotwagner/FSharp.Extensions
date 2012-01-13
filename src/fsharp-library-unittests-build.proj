@@ -1,5 +1,5 @@
 <!--
-# Copyright (c) 2002-2010 Microsoft Corporation. 
+# Copyright (c) 2002-2011 Microsoft Corporation. 
 #
 # This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
 # copy of the license can be found in the License.html file at the root of this distribution. 
@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <!-- Core library tests: all except compact framework (no nunit there) -->
-  <ItemGroup Condition=" '$(TargetFramework)' != 'CompactFramework\2.0' and '$(TargetFramework)' != 'CompactFramework\3.5'  and '$(TargetFramework)' != 'Silverlight\3.0' and '$(TargetFramework)' != 'Silverlight\4.0'">
+  <ItemGroup Condition=" '$(TargetFramework)' != 'CompactFramework\2.0' and '$(TargetFramework)' != 'CompactFramework\3.5'  and '$(TargetFramework)' != 'Silverlight\3.0' and '$(TargetFramework)' != 'Silverlight\4.0' and '$(TargetFramework)' != 'Silverlight\5.0'">
     <ProjectFiles Include="fsharp/FSharp.Core.Unittests/FSharp.Core.Unittests.fsproj"/>
   </ItemGroup>
 

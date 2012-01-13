@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------
 //
-// Copyright (c) 2002-2010 Microsoft Corporation. 
+// Copyright (c) 2002-2011 Microsoft Corporation. 
 //
 // This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
 // copy of the license can be found in the License.html file at the root of this distribution. 
@@ -943,17 +943,28 @@ namespace Microsoft.FSharp.Control
         [<AutoSerializable(false)>]        
         type SuspendedAsync<'T>(args : AsyncParams<'T>) =
             let ctxt = getSyncContext ()
+#if FX_NO_SYNC_CONTEXT
+#else
+            let thread = 
+                match ctxt with
+                |   null -> null // saving a thread-local access
+                |   _ -> Thread.CurrentThread 
+#endif
             let trampolineHolder = args.aux.trampolineHolder
             member this.ContinueImmediate res = 
                 let action () = args.cont res
+                let inline executeImmediately () = trampolineHolder.Protect action
 #if FX_NO_SYNC_CONTEXT
-                trampolineHolder.Protect action
+                executeImmediately ()
 #else
                 let currentCtxt = System.Threading.SynchronizationContext.Current 
-                if Object.Equals(ctxt, currentCtxt) then
-                    trampolineHolder.Protect action
-                else
-                    postOrQueue ctxt trampolineHolder action
+                match ctxt, currentCtxt with
+                |   null, null -> 
+                        executeImmediately ()
+                |   _, _ when Object.Equals(ctxt, currentCtxt) && thread.Equals(Thread.CurrentThread) ->
+                        executeImmediately ()
+                |   _ -> 
+                        postOrQueue ctxt trampolineHolder action
 #endif
                     
             member this.ContinueWithPostOrQueue res =

@@ -1,6 +1,6 @@
 //----------------------------------------------------------------------------
 //
-// Copyright (c) 2002-2010 Microsoft Corporation. 
+// Copyright (c) 2002-2011 Microsoft Corporation. 
 //
 // This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
 // copy of the license can be found in the License.html file at the root of this distribution. 
@@ -123,6 +123,23 @@ let IsBaseCall objArgs =
     | [Expr.Val(v,_,_)] when v.BaseOrThisInfo  = BaseVal -> true
     | _ -> false
 
+// Identify any security attributes
+let IsSecurityAttribute g amap (casmap : Dictionary<Stamp,bool>) (Attrib(tcref,_,_,_,_,_)) m =
+    // There's no CAS on Silverlight, so we have to be careful here
+    match g.attrib_SecurityAttribute.TyconRef.TryDeref with
+    | Some _ -> 
+       let tcs = tcref.Stamp
+       if casmap.ContainsKey(tcs) then
+         casmap.[tcs]
+       else
+         let exists = ExistsInEntireHierarchyOfType (fun t -> typeEquiv g t (mkAppTy g.attrib_SecurityAttribute.TyconRef [])) g amap m FirstIntfInst (mkAppTy tcref [])
+         casmap.[tcs] <- exists
+         exists
+    | _ -> false  
+
+let IsSecurityCriticalAttribute g (Attrib(tcref,_,_,_,_,_)) =
+    (tyconRefEq g tcref g.attrib_SecurityCriticalAttribute.TyconRef || tyconRefEq g tcref g.attrib_SecuritySafeCriticalAttribute.TyconRef)
+    
 let RecdFieldInstanceChecks g ad m (rfinfo:RecdFieldInfo) = 
     if rfinfo.IsStatic then error (Error (FSComp.SR.tcStaticFieldUsedWhenInstanceFieldExpected(),m));
     CheckRecdFieldInfoAttributes g rfinfo m |> CommitOperationResult;        
@@ -1333,7 +1350,7 @@ let AdjustAndForgetUsesOfRecValue cenv (vrefTgt: ValRef) (valScheme : ValScheme)
     let (TypeScheme(generalizedTypars,_)) = valScheme.TypeScheme
     let fty = GeneralizedTypeForTypeScheme valScheme.TypeScheme
     let lvrefTgt = vrefTgt.Deref
-    if nonNil(generalizedTypars) then begin
+    if nonNil(generalizedTypars) then
         // Find all the uses of this recursive binding and use mutation to adjust the expressions 
         // at those points in order to record the inferred type parameters. 
         let recUses = cenv.recUses.Find lvrefTgt
@@ -1352,7 +1369,7 @@ let AdjustAndForgetUsesOfRecValue cenv (vrefTgt: ValRef) (valScheme : ValScheme)
                   let ityargs = generalizeTypars (List.drop (List.length tyargs0) generalizedTypars)
                   primMkApp (Expr.Val (vrefTgt,vrefFlags,m),fty) (tyargs0 @ ityargs) [] m
               fixupPoint :=   fixedUpExpr)
-    end;
+    vrefTgt.Deref.SetValRec ValNotInRecScope
     cenv.recUses <- cenv.recUses.Remove lvrefTgt 
      
 
@@ -1361,7 +1378,7 @@ let AdjustRecType _cenv (vspec:Val) (ValScheme(_,typeScheme,topValData,_,_,_,_,_
     let fty = GeneralizedTypeForTypeScheme typeScheme
     vspec.SetType fty;
     vspec.SetValReprInfo topValData;
-    vspec.SetValRec ValNotInRecScope
+    vspec.SetValRec (ValInRecScope true)
        
 /// Record the generated value expression as a place where we will have to 
 /// adjust using AdjustAndForgetUsesOfRecValue at a letrec point. Every use of a value 
@@ -3427,7 +3444,7 @@ let buildApp cenv expr exprty arg m =
          when valRefEq cenv.g vf cenv.g.reraise_vref -> 
         // exprty is of type: "unit -> 'a". Break it and store the 'a type here, used later as return type. 
         let _unit_ty,rtn_ty = destFunTy cenv.g exprty 
-        MakeApplicableExprNoFlex cenv (mkCompGenSeq m arg (mkReraise m rtn_ty))
+        MakeApplicableExprNoFlex cenv (mkCompGenSequential m arg (mkReraise m rtn_ty))
     | ApplicableExpr(_, Expr.App(Expr.Val(vf,_,_),_,_,[],_),_), _ 
          when (valRefEq cenv.g vf cenv.g.addrof_vref || 
                valRefEq cenv.g vf cenv.g.addrof2_vref) -> 
@@ -4550,7 +4567,7 @@ and TcStmt cenv env tpenv expr =
     if wasUnit then
       expr',tpenv
     else
-      mkCompGenSeq m expr' (mkUnit cenv.g m),tpenv
+      mkCompGenSequential m expr' (mkUnit cenv.g m),tpenv
 
 
 
@@ -5341,6 +5358,7 @@ and TcObjectExprBinding cenv (env: TcEnv) implty tpenv (absSlotInfo,bind) =
         TcNormalizedBinding ObjectExpressionOverrideBinding cenv env tpenv bindingTy None NoSafeInitInfo ([],flex) bind
 
     // 4c. generalize the binding - only relevant when implementing a generic virtual method 
+    
     match NameMap.range nameToPrelimValSchemeMap with 
     | [PrelimValScheme1(id,_,_,_,_,_,_,_,_,_,_)] -> 
         let denv = env.DisplayEnv
@@ -5712,7 +5730,7 @@ and TcRecdExpr cenv ty env tpenv (inherits,optOrigExpr,flds,m) =
     let expr = 
         match superTy with 
         | _ when isStructTy cenv.g ty -> expr
-        | Some(e) -> mkCompGenSeq m e expr
+        | Some(e) -> mkCompGenSequential m e expr
         | None -> expr
     expr,tpenv
 
@@ -6145,11 +6163,10 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                 //  where { (pat1, v1), … , (patn, vn) } = { (pat, vi) | cpati = !pat; 1 <= i <= k }
                 //  and cargs = v1 `merge` ... `merge` vn-1 `merge` vn
                 //
-                let (|BangPatternSequence|_|) pat =
+                let (|BangPatternSequence|) pat =
                   match pat with 
-                  | SynPat.Tuple(pats, clauseM) -> Some(pats, clauseM)
-                  | pat -> Some([pat], pat.Range) 
-                  | _ -> None
+                  | SynPat.Tuple(pats, clauseM) -> (pats, clauseM)
+                  | pat -> ([pat], pat.Range) 
 
                 let translatedCaluses = 
                   [ for (Clause (pat, optWhen, body, range, spClause)) in clauses do
@@ -6281,7 +6298,7 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                     SynExpr.Seq(SuppressSequencePointOnStmtOfSequential,true, c,trans (SynExpr.ImplicitZero m),m) 
 
         let coreSynExpr = trans comp
-        
+
         let delayedExpr = 
             match TryFindIntrinsicOrExtensionMethInfo cenv env interpVarRange ad "Delay" interpExprTy with 
             | [] -> coreSynExpr
@@ -7663,7 +7680,7 @@ and TcMethodApplication
         optArgPreBinder,allArgs,outArgExprs,outArgTmpBinds
   
     // Handle adhoc argument conversions
-    let coerce (AssignedCalledArg(_,CalledArg(_,_,_,isOutArg,_,calledArgTy),CallerArg(callerArgTy,m,_,e))) = 
+    let coerceExpr isOutArg calledArgTy callerArgTy m e = 
     
        if isByrefTy cenv.g calledArgTy && isRefCellTy cenv.g callerArgTy then 
            Expr.Op(TOp.RefAddrGet,[destRefCellTy cenv.g callerArgTy],[e],m) 
@@ -7678,6 +7695,10 @@ and TcMethodApplication
        // Note: not all these casts are not reported in quotations 
        else 
            mkCoerceIfNeeded cenv.g calledArgTy callerArgTy e 
+
+    let coerce (AssignedCalledArg(_,CalledArg(_,_,_,isOutArg,_,calledArgTy),CallerArg(callerArgTy,m,_,e))) = 
+    
+       coerceExpr isOutArg calledArgTy callerArgTy m e
 
     // Record the resolution of the named argument for the Language Service
     allArgs |> List.iter (fun (AssignedCalledArg(idOpt,_,_)) ->
@@ -7697,7 +7718,7 @@ and TcMethodApplication
         if isNil outArgTmpBinds then expr,exprty
         else 
             let outArgTys = outArgExprs |> List.map (tyOfExpr cenv.g)
-            let expr = if isUnitTy cenv.g exprty then mkCompGenSeq m expr  (mkTupled cenv.g  m outArgExprs outArgTys)
+            let expr = if isUnitTy cenv.g exprty then mkCompGenSequential m expr  (mkTupled cenv.g  m outArgExprs outArgTys)
                        else  mkTupled cenv.g  m (expr :: outArgExprs) (exprty :: outArgTys)
             let expr = mkLetsBind m outArgTmpBinds expr
             expr, tyOfExpr cenv.g expr
@@ -7714,31 +7735,34 @@ and TcMethodApplication
                     
                     let action = 
                         match setter with 
-                        | AssignedPropSetter(_,pminfo,pminst) -> 
+                        | AssignedPropSetter (_,pminfo,pminst) -> 
                             MethInfoChecks cenv.g cenv.amap true None [objExpr] ad m pminfo;
                             let calledArgTy = List.head (List.head (ParamTypesOfMethInfo cenv.amap m pminfo pminst))
-                            let argExpr = mkCoerceExpr(argExpr,calledArgTy,m,callerArgTy)
+                            let argExpr = coerceExpr false calledArgTy callerArgTy m argExpr
                             let mut = (if isStructTy cenv.g (tyOfExpr cenv.g objExpr) then DefinitelyMutates else PossiblyMutates)
                             BuildMethodCall cenv env mut m true pminfo NormalValUse pminst [objExpr] [argExpr] |> fst 
 
-                        | AssignedIlFieldSetter(finfo) ->
+                        | AssignedIlFieldSetter finfo ->
                             // Get or set instance IL field 
                             ILFieldInstanceChecks  cenv.g cenv.amap ad m finfo;
+                            let calledArgTy = finfo.FieldType (cenv.amap, m)
+                            let argExpr = coerceExpr false calledArgTy callerArgTy m argExpr
                             BuildILFieldSet cenv.g m objExpr finfo argExpr 
                         
-                        | AssignedRecdFieldSetter(rfinfo) ->
+                        | AssignedRecdFieldSetter rfinfo ->
                             RecdFieldInstanceChecks cenv.g ad m rfinfo; 
-                            let _,ftinst,_ = FreshenPossibleForallTy cenv.g m TyparFlexible (rfinfo.FieldType)
+                            let _,ftinst,calledArgTy = FreshenPossibleForallTy cenv.g m TyparFlexible rfinfo.FieldType
                             CheckRecdFieldMutation m denv rfinfo ftinst;
+                            let argExpr = coerceExpr false calledArgTy callerArgTy m argExpr
                             BuildRecdFieldSet cenv.g m objExpr rfinfo argExpr 
 
                     // Record the resolution for the Language Service
                     CallNameResolutionSink(id.idRange,nenv,Item.PropName(id),ItemOccurence.Use,nenv.eDisplayEnv,ad);
 
-                    mkCompGenSeq m acc action)
+                    mkCompGenSequential m acc action)
 
         // now put them together 
-        let expr = mkCompGenLet m objv expr  (mkCompGenSeq m propSetExpr objExpr)
+        let expr = mkCompGenLet m objv expr  (mkCompGenSequential m propSetExpr objExpr)
         expr
 
     // Build the lambda expression if any 
@@ -9141,7 +9165,7 @@ and MakeCheckSafeInitField g tinst thisValOpt rfref reqExpr (expr:Expr) =
             // This is an instance method, it must have a 'this' var
             mkRecdFieldGet g (exprForVal m thisVar, rfref, tinst, [], m)
     let failureExpr = match thisValOpt with None -> mkCallFailStaticInit g m | Some _ -> mkCallFailInit g m
-    mkCompGenSeq m (mkIfThen g m (mkILAsmClt g m availExpr reqExpr) failureExpr) expr
+    mkCompGenSequential m (mkIfThen g m (mkILAsmClt g m availExpr reqExpr) failureExpr) expr
 
 and MakeCheckSafeInit g tinst safeInitInfo reqExpr expr =
     match safeInitInfo with 
@@ -10163,7 +10187,7 @@ module IncrClassChecking = begin
                         None
 
                 (isPriorToSuperInit, (fun e -> 
-                     let e = match adjustSafeInitFieldExprOpt with None -> e | Some ae -> mkCompGenSeq m ae e
+                     let e = match adjustSafeInitFieldExprOpt with None -> e | Some ae -> mkCompGenSequential m ae e
                      mkSeq SequencePointsAtSeq m assignExpr e)), []
 
         /// Work out the implicit construction side effects of a 'let', 'let rec' or 'do' 
@@ -10503,15 +10527,19 @@ module TyconBindingChecking = begin
                                 PassAIncrClassCtorJustAfterSuperInit :: rest
                         // Insert PassAIncrClassCtorJustAfterLastLet at the point where local construction is known to have been finished 
                         let rest = 
-                            let isBefore = function
-                                | PassAOpen _ | PassAIncrClassCtor _ | PassAInherit _ | PassAIncrClassCtorJustAfterSuperInit -> true
-                                | PassAIncrClassBindings (_,binds,_,_,_) -> binds |> List.exists (function (Binding (_,DoBinding,_,_,_,_,_,_,_,_,_,_)) -> false | _ -> true)
+                            let isAfter b = 
+                                match b with 
+                                | PassAOpen _ | PassAIncrClassCtor _ | PassAInherit _ | PassAIncrClassCtorJustAfterSuperInit -> false
+                                | PassAIncrClassBindings (_,binds,_,_,_) -> binds |> List.exists (function (Binding (_,DoBinding,_,_,_,_,_,_,_,_,_,_)) -> true | _ -> false)
                                 | PassAIncrClassCtorJustAfterLastLet
-                                | PassAMember _ -> false
+                                | PassAMember _ -> true
+                            let restRev = List.rev rest
+                            let afterRev = restRev |> Seq.takeWhile isAfter |> Seq.toList
+                            let beforeRev = restRev |> Seq.skipWhile isAfter |> Seq.toList
                             
-                            [ yield!  rest |> Seq.takeWhile isBefore
+                            [ yield!  List.rev beforeRev
                               yield PassAIncrClassCtorJustAfterLastLet
-                              yield! rest  |> Seq.skipWhile isBefore ]
+                              yield! List.rev afterRev ]
                         b1 :: rest
 
                     // Cover the case where this is not a type with an implicit constructor.

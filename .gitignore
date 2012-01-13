@@ -8,6 +8,11 @@ autom4te.cache
 config.log
 config.make
 config.status
+*.fs.bak
+*.fsi.bak
+*.fsy.bak
+*.fsl.bak
+*.fsproj.bak
 
 # build results on windows
 Debug/

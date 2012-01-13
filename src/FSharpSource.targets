@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-# Copyright (c) 2002-2010 Microsoft Corporation. 
+# Copyright (c) 2002-2011 Microsoft Corporation. 
 #
 # This source code is subject to terms and conditions of the Apache License, Version 2.0. A 
 # copy of the license can be found in the License.html file at the root of this distribution. 
@@ -14,13 +14,15 @@
     <!-- Tail calls on, even in debug -->
     <Tailcalls>true</Tailcalls>
     <TargetFramework Condition="'$(TargetFramework)'==''">cli\4.0</TargetFramework>
-    <!-- For .NET 4.0 use a 4.0 proto compiler, otherwise use a 2.0 proto compiler -->
-    <protoCLIDir Condition="'$(protoCLIDir)' == '' AND '$(TargetFramework)' == 'cli\4.0'">cli\4.0</protoCLIDir>
-    <protoCLIDir Condition="'$(protoCLIDir)' == ''">cli\2.0</protoCLIDir>
+    <!-- For .NET 2.0 use a 2.0 proto compiler, otherwise use a 4.0 proto compiler -->
+    <protoCLIDir Condition="'$(protoCLIDir)' == '' AND '$(TargetFramework)' == 'cli\2.0'">cli\2.0</protoCLIDir>
+    <protoCLIDir Condition="'$(protoCLIDir)' == ''">cli\4.0</protoCLIDir>
     <LkgVersion>2.0.50726.900</LkgVersion>
     <VersionFile>$(FSharpSourcesRoot)\source-build-version</VersionFile>
-    <DefineConstants>NO_STRONG_NAMES;$(DefineConstants)</DefineConstants>
     <FsLexUnicode>true</FsLexUnicode>
+    <StrongNames Condition="'$(StrongNames)' == '' AND !Exists('$(FSharpSourcesRoot)\mono.snk')">false</StrongNames>
+    <StrongNames Condition="'$(StrongNames)' == '' AND Exists('$(FSharpSourcesRoot)\mono.snk') AND '$(TargetFramework)' != 'Silverlight\4.0\Compiler'">true</StrongNames>
+    <DefineConstants Condition="'$(StrongNames)' != 'true'">NO_STRONG_NAMES;$(DefineConstants)</DefineConstants>
     <ProjectLanguage>FSharp</ProjectLanguage>
     <OtherFlags>$(OtherFlags) --times</OtherFlags>
     <NoWarn>$(NoWarn);69;65;54;61;75</NoWarn>
@@ -32,19 +34,20 @@
     <Optimize>false</Optimize>
     <!-- These flags provide a better debugging experience. Locals should be visible. -->
     <OtherFlags>$(OtherFlags) --no-jit-optimize --jit-tracking</OtherFlags>
+    <OtherFlags Condition="'$(StrongNames)' == 'true'">$(OtherFlags) --keyfile:$(FSharpSourcesRoot)\mono.snk</OtherFlags>
     <DefineConstants>CODE_ANALYSIS; $(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <Optimize>true</Optimize>
+    <OtherFlags Condition="'$(StrongNames)' == 'true'">$(OtherFlags) --keyfile:$(FSharpSourcesRoot)\mono.snk</OtherFlags>
   </PropertyGroup>
 
   <!-- Flags used to build the bootstrap compiler.
         -->
   <PropertyGroup Condition="'$(Configuration)'=='Proto'">
     <Optimize>true</Optimize>
-    <DefineConstants>$(DefineConstants);FX_FSLIB_STRUCTURAL_EQUALITY;FX_FSLIB_IOBSERVABLE;FX_FSLIB_LAZY;FX_FSLIB_TUPLE</DefineConstants>
-    <DefineConstants>DEBUG; $(DefineConstants)</DefineConstants>
+    <DefineConstants>DEBUG;NO_STRONG_NAMES;$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 
   <!-- Always qualify the IntermediateOutputPath by the TargetFramework if any exists -->
@@ -88,22 +91,40 @@
   </PropertyGroup>
 
   <!-- Target Silverlight 4.0 -->
-  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\4.0'">
-    <DefineConstants>$(DefineConstants);SILVERLIGHT;FX_NO_ARRAY_LONG_LENGTH;FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE;FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS;FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES;FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS;FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING;FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START;FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS;FX_FSLIB_STRUCTURAL_EQUALITY;FX_FSLIB_IOBSERVABLE;FX_FSLIB_TUPLE</DefineConstants>
+  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\4.0' OR '$(TargetFramework)'=='Silverlight\4.0\Compiler'">
+    <DefineConstants>$(DefineConstants);SILVERLIGHT;FX_NO_ARRAY_LONG_LENGTH;FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE;FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS;FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES;FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS;FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING;FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START;FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS;FX_FSLIB_IOBSERVABLE</DefineConstants>
     <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <SilverlightVersion>v4.0</SilverlightVersion>
+  </PropertyGroup>
+
+  <!-- Target Silverlight 5.0 -->
+  <PropertyGroup Condition="'$(TargetFramework)'=='Silverlight\5.0'">
+    <DefineConstants>$(DefineConstants);FX_ATLEAST_SILVERLIGHT_20_BETA2;SILVERLIGHT</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_ARRAY_LONG_LENGTH;FX_FSLIB_IOBSERVABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS</DefineConstants>
+    <DefineConstants>$(DefineConstants);FX_FSLIB_IOBSERVABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);DONT_INCLUDE_DEPRECATED</DefineConstants>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v5.0</TargetFrameworkVersion>
+    <SilverlightVersion>v5.0</SilverlightVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)'=='WindowsPhone7\Silverlight\4.0'">
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>WindowsPhone</TargetFrameworkProfile>
     <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
-    <DefineConstants>$(DefineConstants);SILVERLIGHT;FX_NO_ARRAY_LONG_LENGTH;FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE;FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS;FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES;FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS;FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING;FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START;FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS;FX_FSLIB_STRUCTURAL_EQUALITY;FX_FSLIB_LAZY;FX_FSLIB_TUPLE;FX_NO_REFLECTION_EMIT</DefineConstants>
+    <DefineConstants>$(DefineConstants);SILVERLIGHT;FX_NO_ARRAY_LONG_LENGTH;FX_NO_DEBUG_PROXIES;FX_NO_EXIT;FX_NO_CHAR_PARSE;FX_NO_DEFAULT_DEPENDENCY_TYPE;FX_SIMPLE_SECURITY_PERMISSIONS;FX_NO_TRUNCATE;FX_NO_CULTURE_INFO_ARGS;FX_NO_REFLECTION_MODULE_HANDLES;FX_NO_OPERATION_CANCELLED;FX_NO_TO_LOWER_INVARIANT;FX_NO_EXIT_CONTEXT_FLAGS;FX_NO_BASED_ARRAYS;FX_NO_DOUBLE_BIT_CONVERTER;FX_NO_BINARY_SERIALIZATION;FX_NO_ASCII_ENCODING;FX_NO_DEFAULT_ENCODING;FX_NO_FILE_OPTIONS;FX_NO_NONBLOCK_IO;FX_NO_COMMAND_LINE_ARGS;FX_NO_ENVIRONMENT;FX_NO_PROCESS_START;FX_NO_APP_DOMAINS;FX_NO_PROCESS_DIAGNOSTICS;FX_FSLIB_STRUCTURAL_EQUALITY;FX_FSLIB_LAZY;FX_FSLIB_TUPLE;FX_NO_REFLECTION_EMIT;FX_FSLIB_IOBSERVABLE</DefineConstants>
     <Tailcalls>false</Tailcalls>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
     <!-- It would be better to use MSBuild resolution here, but the TargetFrameworkIdentifier etc. aren't set up quite correctly as yet -->
-    <OtherFlags>$(OtherFlags) --simpleresolution -r:"C:\Program Files\Reference Assemblies\Microsoft\Framework\Silverlight\v4.0\Profile\WindowsPhone\mscorlib.dll" -r:"C:\Program Files\Reference Assemblies\Microsoft\Framework\Silverlight\v4.0\Profile\WindowsPhone\System.Observable.dll"</OtherFlags>
+    <OtherFlags>$(OtherFlags) --simpleresolution -r:"C:\Program Files\Reference Assemblies\Microsoft\Framework\Silverlight\v4.0\Profile\WindowsPhone\mscorlib.dll" </OtherFlags>
   </PropertyGroup>
 
   <!-- Target CompactFramework 2.0 -->
@@ -146,7 +167,7 @@
   <Import Project="..\Proto\$(protoCLIDir)\bin\Microsoft.FSharp-proto.Targets" Condition="'$(BuildWith)' == '' And '$(ProjectLanguage)' == 'FSharp' "/>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="'$(BuildWith)' == 'LKG' And '$(ProjectLanguage)' == 'FSharp' AND !Exists('$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll') " />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition="'$(BuildWith)' == 'LKG' And '$(ProjectLanguage)' == 'FSharp' AND Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.Common.targets"  Condition="'$(TargetFramework)'=='Silverlight\3.0' or '$(TargetFramework)'=='Silverlight\4.0'"/>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.Common.targets"  Condition="'$(TargetFramework)'=='Silverlight\3.0' or '$(TargetFramework)'=='Silverlight\4.0'  or '$(TargetFramework)'=='Silverlight\4.0\Compiler'  or '$(TargetFramework)'=='Silverlight\5.0'"/>
 
  
   <!-- Reference an existing FSI.EXE for use from within MSBuild -->
@@ -190,7 +211,7 @@
             Condition="'$(Configuration)'!='Release' and '$(Configuration)'!='Debug' and '$(Configuration)'!='Proto'"/>
     <Error
             Text="TargetFramework '$(TargetFramework)' is not one of the supported configurations: 'empty', cli\2.0, cli\4.0, Silverlight/3.0, CompactFramework/3.5, WindowsPhone7\Silverlight\4.0"
-            Condition="! ('$(TargetFramework)' == 'cli\4.0' or '$(TargetFramework)' == 'cli\2.0' or '$(TargetFramework)' == 'mono\4.0' or '$(TargetFramework)' == 'mono\2.0' or '$(TargetFramework)' == 'Silverlight\3.0' or '$(TargetFramework)' == 'Silverlight\4.0' or '$(TargetFramework)' == 'CompactFramework\2.0' or '$(TargetFramework)' == 'CompactFramework\3.5' or '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0')"/>
+            Condition="! ('$(TargetFramework)' == 'cli\4.0' or '$(TargetFramework)' == 'cli\2.0' or '$(TargetFramework)' == 'mono\4.0' or '$(TargetFramework)' == 'mono\2.0' or '$(TargetFramework)' == 'Silverlight\3.0' or '$(TargetFramework)' == 'Silverlight\4.0' or '$(TargetFramework)' == 'Silverlight\4.0\Compiler' or '$(TargetFramework)' == 'Silverlight\5.0' or '$(TargetFramework)' == 'CompactFramework\2.0' or '$(TargetFramework)' == 'CompactFramework\3.5' or '$(TargetFramework)' == 'WindowsPhone7\Silverlight\4.0')"/>
   </Target>
 
   <!-- This build step copies files to the output folder while replacing build variables in the text of
@@ -199,6 +220,7 @@
           Name="CustomCopyLocalFiles"
           Inputs="@(CustomCopyLocal)"
           Outputs="@(CustomCopyLocal->'$(OutDir)%(TargetFilename)')"
+          Condition="'$(targetCLIDir)'!='Silverlight/4.0/'"
                 >
     <Exec Command="$(FSharpSourcesRoot)\fsharp\FSharp.Build\subst.exe {LkgVersion} $(LkgVersion) {BuildSuffix} &quot;$(FsBuildSuffix)&quot; {FSharpTargetsDir} unused &quot;%(CustomCopyLocal.FullPath)&quot; &gt; $(OutDir)%(CustomCopyLocal.TargetFilename)  "/>
     <!-- Make sure it will get cleaned  -->
