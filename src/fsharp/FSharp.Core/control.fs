@@ -318,8 +318,6 @@ namespace Microsoft.FSharp.Control
 #endif
 
     
-
-
     /// We use our own internal implementation of queues to avoid a dependency on System.dll
     type Queue<'T>() =  //: IEnumerable<T>, ICollection, IEnumerable
     
@@ -1694,9 +1692,9 @@ namespace Microsoft.FSharp.Control
                 do queueAsync 
                        innerCTS.Token
                                               
-                       (fun res -> ctsRef := null; resultCell.RegisterResult (Ok res, reuseThread=true))   
-                       (fun err -> ctsRef := null; resultCell.RegisterResult (Error err,reuseThread=true))   
-                       (fun err -> ctsRef := null; resultCell.RegisterResult (Canceled err,reuseThread=true))    
+                       (fun res -> _reg.Dispose(); ctsRef := null; resultCell.RegisterResult (Ok res, reuseThread=true))   
+                       (fun err -> _reg.Dispose(); ctsRef := null; resultCell.RegisterResult (Error err,reuseThread=true))   
+                       (fun err -> _reg.Dispose(); ctsRef := null; resultCell.RegisterResult (Canceled err,reuseThread=true))    
                        
                        computation
                      |> unfake
@@ -2361,4 +2359,11 @@ namespace Microsoft.FSharp.Control
         let split (f : 'T -> Choice<'U1,'U2>) (w: IObservable<'T>) =
             choose (fun v -> match f v with Choice1Of2 x -> Some x | _ -> None) w,
             choose (fun v -> match f v with Choice2Of2 x -> Some x | _ -> None) w
+
+
+    // Type aliases to disambiguate 
+    // (the types are also defined in System.Reactive.dll)
+    type IObserver<'T> = System.IObserver<'T>
+    type IObservable<'T> = System.IObservable<'T>
+
 

@@ -96,10 +96,10 @@ type TypeCheckResults internal (results:Microsoft.FSharp.Compiler.SourceCodeServ
 
     member x.FullResults = results
 
-type public SimpleSourceCodeServices() =
+type public SimpleSourceCodeServices(?defines) =
 
     let filename = "example.fsx"
-    let tokenizer = SourceTokenizer([], filename)
+    let tokenizer = SourceTokenizer(defaultArg defines [], filename)
     let checker = InteractiveChecker.Create(fun _ -> ())
     let fileversion = 0
  

@@ -1101,3 +1101,7 @@ namespace Microsoft.FSharp.Control
         val pairwise: sourceEvent:IEvent<'Del,'T> -> IEvent<'T * 'T>
 
 
+    // Type aliases to disambiguate 
+    // (the types are also defined in System.Reactive.dll)
+    type IObserver<'T> = System.IObserver<'T>
+    type IObservable<'T> = System.IObservable<'T>

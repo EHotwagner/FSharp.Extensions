@@ -5953,12 +5953,15 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
             | SynExpr.DoBang _
             | SynExpr.LetOrUseBang _
             | SynExpr.MatchBang  _ 
-            | SynExpr.YieldOrReturnFrom _
-            | SynExpr.ImplicitZero _ -> None
+            | SynExpr.YieldOrReturnFrom _ -> None
+
+            // Zero is treated as return Unit
+            | SynExpr.ImplicitZero m -> Some (mkSynUnit m)
 
             // Return is simplified to identity
             | SynExpr.YieldOrReturn (_, e, _) -> Some e
-            | _ -> None
+            // Anything else is interpreted as 'do <e>' and gets translated to '<e>; ()'
+            | e -> Some (SynExpr.Seq(SequencePointsAtSeq, true, e, mkSynUnit e.Range, e.Range))
 
         let rec tryTrans comp =
             match comp with 
@@ -6202,17 +6205,22 @@ and TcComputationExpression cenv (env: TcEnv) ty m interpValOpt tpenv comp =
                             //   Bind(<merged>, function <pats> -> Return (Delay (fun () -> ...))
                             //                           | _ -> Fail)
                             ensureOperationExists "Return" clauseM
-                            ensureOperationExists "Fail" clauseM
                             ensureOperationExists "Delay" clauseM
-                              
 
                             // Create pattern matching returning body computation or fail
                             let bodyFunc = mkSynMatchLambda(false,false,clauseM,[Clause(SynPat.Wild clauseM, None, trans body, body.Range, SequencePointAtTarget)], spMatch)
                             let succBody = mksynCall "Return" clauseM [mksynCall "Delay" clauseM [bodyFunc]]
-                            let failBody = mksynCall "Fail" clauseM []
+                            let succClause = Clause(inputPat, optWhen, succBody, range, spClause)
+
                             let bodyClauses =
-                              [ Clause(inputPat, optWhen, succBody, range, spClause);
-                                Clause(SynPat.Wild clauseM, None, failBody, range, spClause) ]
+                              // If the computation builder does not define 'Fail' then we 
+                              // only generate a single match (that should better always succeed)
+                              if isOperationAvailable "Fail" then 
+                                let failBody = mksynCall "Fail" clauseM []
+                                let failClause = Clause(SynPat.Wild clauseM, None, failBody, range, spClause)
+                                [ succClause; failClause ]
+                              else
+                                [ succClause ]
                                 
                             let consumeExpr = mkSynMatchLambda(false,false,clauseM,bodyClauses,spMatch)                              
                             let translated = mksynCall "Bind" clauseM [inputVal; consumeExpr]

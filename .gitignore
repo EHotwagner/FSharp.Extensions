@@ -34,6 +34,8 @@ src/fsharp/FSharp.Core/obj/
 src/fsharp/Fsc-proto/obj/
 src/fsharp/Fsc/obj/
 src/fsharp/fsi/obj/
+src/fsharp/FSharp.Compiler.Silverlight/obj/
+samples/SilverlightHostedCompilerServices/Samples.WebApp.suo
 
 # ignore generated lex/pars files
 src/fsharp/FSharp.Compiler-proto/illex.fs
