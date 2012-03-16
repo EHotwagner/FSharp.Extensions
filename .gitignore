@@ -22,6 +22,7 @@ src/fsharp/unittests/UnittestsGeneratedInterfaceFileToTestGotoDefinition.Reserve
 # build results on windows
 Debug/
 Proto/
+Release/
 lkg/
 src/all-vs2010.suo
 src/fsharp/FSharp.Build-proto/obj/
