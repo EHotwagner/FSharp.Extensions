@@ -17,6 +17,8 @@ config.status
 *.targets.bak
 *.proj.bak
 *.txt.bak
+*.js.bak
+*.aspx.bak
 src/fsharp/unittests/UnittestsGeneratedInterfaceFileToTestGotoDefinition.ReservedName.fsi
 
 # build results on windows
@@ -37,6 +39,8 @@ src/fsharp/Fsc/obj/
 src/fsharp/fsi/obj/
 src/fsharp/FSharp.Compiler.Silverlight/obj/
 samples/SilverlightHostedCompilerServices/Samples.WebApp.suo
+samples/SilverlightHostedCompilerServices/Samples.Web/ClientBin/
+samples/SilverlightHostedCompilerServices/Samples.Web/bin/
 
 # ignore generated lex/pars files
 src/fsharp/FSharp.Compiler-proto/illex.fs
