@@ -1525,7 +1525,9 @@ let signerCloseKeyContainer kc =
 #endif
 
 let signerSignatureSize (pk:byte[]) = 
-  if IL.runningOnMono then (if pk.Length > 32 then pk.Length - 32 else 128) else
+ if IL.runningOnMono then
+   if pk.Length > 32 then pk.Length - 32 else 128
+ else
   let mutable pSize =  0u
 #if FX_ATLEAST_40
   let iclrSN = getICLRStrongName()

@@ -469,7 +469,11 @@ type FsiCommandLineOptions(argv: string[], tcConfigB, fsiConsoleOutput: FsiConso
     let mutable enableConsoleKeyProcessing = 
        // Mono on Win32 doesn't implement correct console processing
        not (runningOnMono && System.Environment.OSVersion.Platform = System.PlatformID.Win32NT) 
+#if MONO
+    let mutable gui        = false // override via "--gui", on by default
+#else
     let mutable gui        = true // override via "--gui", on by default
+#endif
 #if DEBUG
     let mutable showILCode = false // show modul il code 
 #endif

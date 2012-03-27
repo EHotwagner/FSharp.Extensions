@@ -379,10 +379,18 @@ namespace Microsoft.FSharp.Core
                 else 
                     let v = 
 #if FX_ATLEAST_40
-                       if  isOX s then 
+                       if  isOX s then
+#if MONO
+                          BigInteger.Parse (s.[2..])
+#else
                           BigInteger.Parse (s.[2..],NumberStyles.AllowHexSpecifier,CultureInfo.InvariantCulture)
+#endif
                        else
+#if MONO
+                          BigInteger.Parse s
+#else
                           BigInteger.Parse (s,NumberStyles.AllowLeadingSign,CultureInfo.InvariantCulture)
+#endif
 #else
                        BigInteger.Parse s
 #endif

@@ -10,8 +10,7 @@
 // You must not remove this notice, or any other, from this software.
 //----------------------------------------------------------------------------
 
-#if FX_ATLEAST_40
-#else
+#if FX_NO_CANCELLATIONTOKEN_CLASSES
 namespace System
     open System
     open Microsoft.FSharp.Core
@@ -301,7 +300,8 @@ namespace Microsoft.FSharp.Control
     open Microsoft.FSharp.Control
     open Microsoft.FSharp.Collections
 
-#if FX_ATLEAST_40
+#if FX_NO_TASK
+#else
     open System.Threading
     open System.Threading.Tasks
     
@@ -1168,7 +1168,8 @@ namespace Microsoft.FSharp.Control
         let StartWithContinuations(token:CancellationToken, a:Async<'T>, cont, econt, ccont) : unit =
             startAsync token (cont >> fake) (econt >> fake) (ccont >> fake) a |> ignore
             
-#if FX_ATLEAST_40      
+#if FX_NO_TASK
+#else
         type VolatileBarrier() =
             [<VolatileField>]
             let mutable isStopped = false
@@ -1263,7 +1264,8 @@ namespace Microsoft.FSharp.Control
             let token = defaultArg cancellationToken (!defaultCancellationTokenSource).Token
             CancellationTokenOps.Start (token, computation)
 
-#if FX_ATLEAST_40
+#if FX_NO_TASK
+#else
         static member StartAsTask (computation,?taskCreationOptions,?cancellationToken)=
             let token = defaultArg cancellationToken (!defaultCancellationTokenSource).Token        
             CancellationTokenOps.StartAsTask(token,computation,taskCreationOptions)
@@ -1722,7 +1724,8 @@ namespace Microsoft.FSharp.Control
         static member TryCancelled (p: Async<'T>,f) = 
             whenCancelledA f p
 
-#if FX_ATLEAST_40            
+#if FX_NO_TASK
+#else
         static member AwaitTask (task:Task<'T>) : Async<'T> =
             protectedPrimitiveWithResync(fun ({aux = aux} as args) ->
                 let continuation (completedTask : Task<_>) : unit =

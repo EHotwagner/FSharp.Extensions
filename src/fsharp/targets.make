@@ -92,21 +92,21 @@ install-lib-2 install-lib-4:
 	@gacutil -i $(outdir)$(ASSEMBLY) -root $(DESTDIR)/$(libdir) -package $(TARGET)
 	@if test -e $(outdir)$(NAME).sigdata; then \
 		$(INSTALL_LIB) $(outdir)$(NAME).sigdata $(DESTDIR)/$(libdir)mono/gac/$(NAME)/$(VERSION)__$(TOKEN); \
-		ln -fs -t $(DESTDIR)/$(libdir)mono/$(TARGET)/ ../gac/$(NAME)/$(VERSION)__$(TOKEN)/$(NAME).sigdata; \
+		ln -fs  ../gac/$(NAME)/$(VERSION)__$(TOKEN)/$(NAME).sigdata $(DESTDIR)/$(libdir)mono/$(TARGET)/$(NAME).sigdata; \
 	fi
 	@if test -e $(outdir)$(NAME).optdata; then \
 		$(INSTALL_LIB) $(outdir)$(NAME).optdata $(DESTDIR)/$(libdir)mono/gac/$(NAME)/$(VERSION)__$(TOKEN); \
-		ln -fs -t $(DESTDIR)/$(libdir)mono/$(TARGET)/ ../gac/$(NAME)/$(VERSION)__$(TOKEN)/$(NAME).optdata; \
+		ln -fs ../gac/$(NAME)/$(VERSION)__$(TOKEN)/$(NAME).optdata $(DESTDIR)/$(libdir)mono/$(TARGET)/; \
 	fi
 	$(INSTALL_LIB) $(outdir)Microsoft.FSharp.targets $(DESTDIR)/$(libdir)mono/$(TARGET)/;
 
 install-bin-2 install-bin-4:
-	sed -e 's,[@]DIR[@],$(libdir)mono/$(TARGET),g' -e 's,[@]TOOL[@],$(ASSEMBLY),g' < $(topdir)launcher.in > $(outdir)$(NAME)$(VERSION)
-	chmod +x $(outdir)$(NAME)$(VERSION)
+	sed -e 's,[@]DIR[@],$(libdir)mono/$(TARGET),g' -e 's,[@]TOOL[@],$(ASSEMBLY),g' < $(topdir)launcher.in > $(outdir)$(subst fs,fsharp,$(NAME))$(VERSION)
+	chmod +x $(outdir)$(subst fs,fsharp,$(NAME))$(VERSION)
 	@mkdir -p $(DESTDIR)/$(libdir)
 	@mkdir -p $(DESTDIR)/$(bindir)
 	$(INSTALL_LIB) $(outdir)$(ASSEMBLY) $(DESTDIR)$(libdir)mono/$(TARGET)
-	$(INSTALL_BIN) $(outdir)$(NAME)$(VERSION) $(DESTDIR)/$(bindir)
+	$(INSTALL_BIN) $(outdir)$(subst fs,fsharp,$(NAME))$(VERSION) $(DESTDIR)/$(bindir)
 
 $(objdir) $(objdir)$(TARGET_2_0) $(objdir)$(TARGET_4_0):
 	mkdir -p $@

@@ -8,17 +8,12 @@ autom4te.cache
 config.log
 config.make
 config.status
-*.fs.bak
-*.fsi.bak
-*.fsy.bak
-*.fsl.bak
-*.fsproj.bak
-*.sln.bak
-*.targets.bak
-*.proj.bak
-*.txt.bak
-*.js.bak
-*.aspx.bak
+*.bak
+*.orig
+*.BACKUP.*.*
+*.BASE.*.*
+*.LOCAL.*.*
+*.REMOTE.*.*
 src/fsharp/unittests/UnittestsGeneratedInterfaceFileToTestGotoDefinition.ReservedName.fsi
 
 # build results on windows

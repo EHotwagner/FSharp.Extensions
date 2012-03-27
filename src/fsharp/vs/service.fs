@@ -2768,8 +2768,8 @@ type Scope(/// Information corresponding to miscellaneous command-line options (
                       else if File.SafeExists filename
                               then resultInFile
                               else generateFsi ()
-      | _                -> FindDeclResult.IdNotFound
 #endif
+      | _                -> FindDeclResult.IdNotFound
     member scope.GetDeclarationLocation (line:int)(lineStr:string)(idx:int)(names: Names)(isDecl:bool) : FindDeclResult = scope.GetDeclarationLocationInternal false line lineStr idx names None isDecl
 
 //----------------------------------------------------------------------------
@@ -3806,8 +3806,12 @@ module (* internal *) CompilerEnvironment =
             ""
 #else
             match Internal.Utilities.FSharpEnvironment.BinFolderOfDefaultFSharpCompiler with 
-                  Some(dir)->dir 
-                | None -> System.Environment.GetEnvironmentVariable("mFSharp_BinDir")     
+                | Some(dir)->dir 
+                | None -> 
+#if SILVERLIGHT
+                    ""
+#else
+                    System.Environment.GetEnvironmentVariable("mFSharp_BinDir")     
 #endif
     
         let tcConfigB = Build.TcConfigBuilder.CreateNew(defaultFSharpBinariesDir, true (* optimize for memory *), projectDir) 
