@@ -567,15 +567,10 @@ and
     ///
     /// F# syntax: let! pat = expr in expr
     /// F# syntax: use! pat = expr in expr
-<<<<<<< HEAD
     /// F# syntax: let! pat1 = expr1 and pat2 = expr2 .. in expr
     /// Computation expressions only
     | LetOrUseBang    of SequencePointInfoForBinding * bool * (SynPat * SynExpr) list * SynExpr * range
-=======
-    /// Computation expressions only
-    | LetOrUseBang    of SequencePointInfoForBinding * bool * SynPat * SynExpr * SynExpr * range
 
->>>>>>> fsharp/master
     /// F# syntax: do! expr 
     /// Computation expressions only
     | DoBang      of SynExpr * range
