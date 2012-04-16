@@ -3808,9 +3808,6 @@ module (* internal *) CompilerEnvironment =
             match Internal.Utilities.FSharpEnvironment.BinFolderOfDefaultFSharpCompiler with 
                 | Some(dir)->dir 
                 | None -> 
-#if SILVERLIGHT
-                    ""
-#else
                     System.Environment.GetEnvironmentVariable("mFSharp_BinDir")     
 #endif
     
